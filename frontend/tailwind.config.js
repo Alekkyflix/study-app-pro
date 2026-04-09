@@ -1,0 +1,3 @@
+template: html
+plugins:
+  tailwindcss:

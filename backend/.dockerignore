@@ -1,0 +1,11 @@
+frontend/*.log
+frontend/dist/
+frontend/.wrangler/
+
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/htmlcov/
+
+.DS_Store
+Thumbs.db
