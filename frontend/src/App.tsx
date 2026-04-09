@@ -11,17 +11,19 @@ import { BottomNav } from "./components/BottomNav";
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-background">
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <div className="min-h-screen bg-white flex flex-col">
         <Header />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/library" element={<Library />} />
-          <Route path="/chat/:id" element={<Chat />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <main className="flex-1 overflow-auto">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/chat/:id" element={<Chat />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </main>
         <BottomNav />
       </div>
     </BrowserRouter>

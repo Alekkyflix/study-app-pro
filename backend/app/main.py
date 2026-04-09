@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import lectures, transcription, summarization, chat, documents, reports, analytics
+from app.api import lectures, chat
 from app.database.db import init_db
 
 # Initialize database on startup
@@ -29,25 +29,21 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(lectures.router, prefix="/api/lectures", tags=["lectures"])
-app.include_router(transcription.router, prefix="/api", tags=["transcription"])
-app.include_router(summarization.router, prefix="/api", tags=["summarization"])
-app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(documents.router, prefix="/api", tags=["documents"])
-app.include_router(reports.router, prefix="/api", tags=["reports"])
-app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+# Include routers (routers already have /api prefix defined)
+app.include_router(lectures.router)
+app.include_router(chat.router)
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
 
 @app.get("/")
 async def root():
