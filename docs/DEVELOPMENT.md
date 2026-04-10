@@ -40,7 +40,7 @@ alembic upgrade head
 
 6. **Start server:**
 ```bash
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 
 Server runs on `http://localhost:8000`
@@ -240,8 +240,15 @@ VITE_SUPABASE_ANON_KEY=key
 
 ### Backend
 ```bash
+
+deactivate
+rm -rf .venv
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
 # Run server with hot reload
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 
 # Run tests
 pytest
