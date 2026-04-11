@@ -35,9 +35,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi import Depends
+from app.security import get_current_user
+
 # Include routers (routers already have /api prefix defined)
-app.include_router(lectures.router)
-app.include_router(chat.router)
+app.include_router(lectures.router, dependencies=[Depends(get_current_user)])
+app.include_router(chat.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/health")
 async def health_check():

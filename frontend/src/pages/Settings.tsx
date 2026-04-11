@@ -1,7 +1,9 @@
 import { Moon, Bell, Lock, LogOut, User, Save } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export function Settings() {
+  const { signOut } = useAuth();
   const [settings, setSettings] = useState({
     darkMode: false,
     notifications: true,
@@ -140,7 +142,9 @@ export function Settings() {
             <Save className="w-5 h-5" />
             Save Changes
           </button>
-          <button className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
+          <button 
+            onClick={signOut}
+            className="flex-1 bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
             <LogOut className="w-5 h-5" />
             Log Out
           </button>
