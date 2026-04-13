@@ -164,12 +164,18 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Load from Supabase
   useEffect(() => {
+    // If auth is still loading, don't update settings loading yet
+    // Wait for the user object to stabilize
     if (!user) {
-      setLoading(false);
-      return;
+      // Small timeout to allow auth to finish before final fallback
+      const timer = setTimeout(() => {
+        if (!user) setLoading(false);
+      }, 500);
+      return () => clearTimeout(timer);
     }
 
     const fetchProfileAndSettings = async () => {
+      setLoading(true); // Ensure we are loading when user changes
       try {
         // Use maybeSingle to avoid 406 error when profile doesn't exist yet
         const { data, error } = await supabase
