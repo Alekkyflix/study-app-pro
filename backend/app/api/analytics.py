@@ -1,15 +1,15 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from app.database.db import get_db
-from app.services.analytics import analytics_service
+"""
+Analytics endpoints
+Track progress and learning metrics
+"""
+from fastapi import APIRouter
 
-router = APIRouter(prefix="/api/analytics", tags=["analytics"])
+router = APIRouter()
 
-@router.get("/overview", response_model=dict)
-async def get_analytics_overview(db: Session = Depends(get_db)):
+@router.get("/analytics/overview")
+async def get_analytics_overview():
     """Get high-level analytics dashboard data"""
-    data = await analytics_service.get_overview(db)
-    return {"success": True, "data": data}
+    pass
 
 @router.get("/analytics/lectures")
 async def get_lecture_analytics():

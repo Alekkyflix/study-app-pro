@@ -257,7 +257,7 @@ export function Settings() {
         <SettingSection title="Privacy & Security">
           <SettingRow icon={Shield} label="AI Data Usage" description="Allow AI providers to use data for training" type="toggle" value={settings.aiDataUsage} onChange={(v) => updateSetting('aiDataUsage', v)} />
           <SettingRow icon={Database} label="Analytics" type="toggle" value={settings.analyticsEnabled} onChange={(v) => updateSetting('analyticsEnabled', v)} />
-          <SettingRow icon={Lock} label="Require Biometrics" type="toggle" value={settings.biometricLock} onChange={(v) => updateSetting('biometricLock', v)} />
+          <SettingRow icon={ShieldCheck} label="Require Biometrics" type="toggle" value={settings.biometricLock} onChange={(v) => updateSetting('biometricLock', v)} />
           <SettingRow icon={Trash2} label="Export All My Data" onClick={() => showInfo('Export', 'Preparing your data archive...')} />
           <SettingRow icon={Trash2} label="DELETE EVERYTHING" type="danger" onClick={handleDeleteAccount} />
         </SettingSection>

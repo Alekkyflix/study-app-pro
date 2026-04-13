@@ -1,13 +1,12 @@
 """
 Main FastAPI application entry point
 """
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.api import lectures, chat, analytics, reports
+from app.api import lectures, chat
 from app.database.db import init_db
-from app.security import get_current_user
 
 # Initialize database on startup
 @asynccontextmanager
@@ -36,11 +35,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi import Depends
+from app.security import get_current_user
+
 # Include routers (routers already have /api prefix defined)
 app.include_router(lectures.router, dependencies=[Depends(get_current_user)])
 app.include_router(chat.router, dependencies=[Depends(get_current_user)])
-app.include_router(analytics.router, dependencies=[Depends(get_current_user)])
-app.include_router(reports.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/health")
 async def health_check():
