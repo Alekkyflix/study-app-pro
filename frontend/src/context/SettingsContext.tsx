@@ -256,11 +256,33 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const { error } = await supabase
         .from('profiles')
-        .update(data)
-        .eq('id', user.id);
+        .upsert({ 
+          id: user.id, 
+          ...data,
+          updated_at: new Date().toISOString()
+        });
       
       if (error) throw error;
-      setProfile(prev => prev ? { ...prev, ...data } : null);
+      
+      // Update local state immediately. 
+      // If profile was null (fallback mode), initialize it with the new data.
+      setProfile(prev => {
+        if (!prev) {
+          return {
+            full_name: '',
+            phone_number: '',
+            university: '',
+            course: '',
+            year_of_study: '',
+            preferred_language: 'English',
+            joined_at: new Date().toISOString(),
+            recording_consent: false,
+            ...data
+          } as ProfileData;
+        }
+        return { ...prev, ...data };
+      });
+      
       showSuccess('Profile Updated', 'Your biological information is safe with your study buddy.');
     } catch (err) {
       console.error('Error updating profile:', err);

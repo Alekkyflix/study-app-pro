@@ -6,10 +6,13 @@ import { useNotification } from '../../context/NotificationContext';
 import { Shield, Check, AlertCircle, FileText, Scale, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { useSettings } from '../../context/SettingsContext';
+
 export function Consent() {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { updateProfile } = useSettings();
   const navigate = useNavigate();
   const { showError, showSuccess } = useNotification();
 
@@ -18,23 +21,15 @@ export function Consent() {
     
     setLoading(true);
     try {
-      // 1. Update the database record (Upsert ensures it's created if it doesn't exist)
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .upsert({ 
-          id: user.id, 
-          recording_consent: true,
-          updated_at: new Date().toISOString()
-        });
-      
-      if (dbError) throw dbError;
+      // 1. Use updateProfile helper which handles both DB upsert and global state refresh
+      await updateProfile({ recording_consent: true });
 
-      // 2. Backup: Update auth metadata as well
+      // 2. Backup: Update auth metadata 
       await supabase.auth.updateUser({
         data: { recording_consent: true }
       });
 
-      // 3. Mark as onboarded/contented in local storage
+      // 3. Mark in local storage
       localStorage.setItem('studypro_consent_given', 'true');
       
       showSuccess("Consent Recorded", "You are now authorized to use StudyPro features.");
