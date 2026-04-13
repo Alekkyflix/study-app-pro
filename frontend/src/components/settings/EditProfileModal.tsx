@@ -100,7 +100,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                     </select>
 
                     {/* Manual Entry Field */}
-                    {(!formData.university || !["Meru University","University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university)) && (
+                    {(!formData.university || !["Meru University", "University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university)) && (
                       <motion.input
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
