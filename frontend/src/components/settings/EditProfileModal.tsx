@@ -96,11 +96,11 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                       <option value="Strathmore University">Strathmore University</option>
                       <option value="Jomo Kenyatta University">JKUAT</option>
                       <option value="Moi University">Moi University</option>
-                      <option value="Other">Other (Type manually)</option>
+                      <option value="Other">Other</option>
                     </select>
 
                     {/* Manual Entry Field */}
-                    {(!formData.university || !["University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university)) && (
+                    {(!formData.university || !["Meru University","University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university)) && (
                       <motion.input
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
