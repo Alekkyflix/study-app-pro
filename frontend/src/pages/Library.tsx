@@ -1,4 +1,4 @@
-import { Search, Download, Trash2, Clock, BookOpen, Loader, FileText, Mic, MessageSquare } from "lucide-react";
+import { Search, Download, Trash2, Clock, BookOpen, FileText, Mic, MessageSquare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiClient } from "../services/api";
 import { ChatPanel } from "../components/ChatPanel";
@@ -16,13 +16,12 @@ export function Library() {
   const [searchQuery, setSearchQuery] = useState("");
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Detail view state
   const [selectedLectureId, setSelectedLectureId] = useState<string | null>(null);
   const [selectedLectureDetails, setSelectedLectureDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const { showModal, showSuccess, showError } = useNotification();
 
   useEffect(() => {
     async function loadLectures() {
@@ -37,7 +36,6 @@ export function Library() {
         setLoading(false);
       }
     }
-    
     loadLectures();
   }, []);
 
@@ -96,7 +94,6 @@ export function Library() {
         if (detailsRes.success) {
           setSelectedLectureDetails(detailsRes.lecture);
         }
-        // Also refresh the overall list so the main lecture object knows it has a summary
         const listRes = await apiClient.getLectures();
         if (listRes.success) setLectures(listRes.lectures);
       } else {
@@ -131,13 +128,11 @@ export function Library() {
     <div className="min-h-screen bg-[#fafafa] pb-24 md:pb-8 text-gray-900 tracking-tight">
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-gray-100 blur-3xl rounded-full opacity-50 -z-10 pointer-events-none"></div>
       <div className="max-w-7xl mx-auto px-4 py-12 z-10">
-        {/* Header */}
         <div className="mb-12">
           <h1 className="text-5xl font-extrabold text-gray-900 mb-3 tracking-tighter">Lecture Library</h1>
           <p className="text-xl font-medium text-gray-500 tracking-tight">Browse and manage your recorded lectures</p>
         </div>
 
-        {/* Search */}
         <div className="glass-card rounded-2xl p-4 mb-8">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
@@ -151,14 +146,11 @@ export function Library() {
           </div>
         </div>
 
-        {/* Two-column layout */}
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Left Column: List */}
           <div className="w-full md:w-1/3 glass-card rounded-3xl overflow-hidden flex flex-col h-[600px] md:h-[700px] premium-shadow">
             <div className="p-6 border-b border-gray-100 bg-white">
               <h2 className="font-bold tracking-tight text-gray-900 text-lg">Files ({filtered.length})</h2>
             </div>
-            
             <div className="overflow-y-auto flex-1 p-2 space-y-1">
               {loading ? (
                 <div className="p-4 space-y-4">
@@ -200,7 +192,6 @@ export function Library() {
             </div>
           </div>
 
-          {/* Right Column: Preview */}
           <div className="w-full md:w-2/3 glass-card rounded-3xl p-8 min-h-[600px] md:h-[700px] flex flex-col premium-shadow">
             {!selectedLectureId ? (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
@@ -211,13 +202,12 @@ export function Library() {
             ) : loadingDetails ? (
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6">
-                   <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+                  <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
                 </div>
                 <p className="text-gray-500 font-bold">Fetching details...</p>
               </div>
             ) : selectedLectureDetails ? (
               <div className="flex flex-col h-full overflow-y-auto pr-2">
-                {/* Preview Header */}
                 <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-100 shrink-0">
                   <div>
                     <h2 className="text-3xl font-extrabold tracking-tighter text-gray-900 mb-2">
@@ -235,24 +225,24 @@ export function Library() {
                   </div>
                   <div className="flex items-center gap-2">
                     {selectedLectureDetails.transcript && (
-                      <button 
+                      <button
                         onClick={() => setShowChat(true)}
-                        className="btn-icon" 
+                        className="btn-icon"
                         title="Chat with AI"
                       >
                         <MessageSquare className="w-5 h-5" />
                       </button>
                     )}
-                    <button 
+                    <button
                       onClick={() => handleDownloadText(selectedLectureDetails.title, selectedLectureDetails.summary, selectedLectureDetails.transcript)}
-                      className="btn-icon" 
-                        title="Download Text Outline"
+                      className="btn-icon"
+                      title="Download Text Outline"
                     >
                       <Download className="w-5 h-5" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(selectedLectureDetails.id)}
-                      className="p-4 rounded-full border border-gray-200 bg-white text-red-500 hover:border-red-200 hover:bg-red-50 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm" 
+                      className="p-4 rounded-full border border-gray-200 bg-white text-red-500 hover:border-red-200 hover:bg-red-50 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm"
                       title="Delete Lecture"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -260,10 +250,7 @@ export function Library() {
                   </div>
                 </div>
 
-                {/* Content Tabs / Sections */}
                 <div className="space-y-8 pb-4">
-                  
-                  {/* Summary Section */}
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="w-5 h-5 text-purple-500" />
@@ -282,19 +269,25 @@ export function Library() {
                           <h4 className="font-bold text-gray-900 mb-2 text-lg">No Summary Available</h4>
                           <p className="text-sm font-medium text-gray-500 max-w-sm mb-4">Generate an AI-powered summary to condense this lecture into its core key concepts.</p>
                         </div>
-                        <button 
+                        <button
                           onClick={handleGenerateSummary}
                           disabled={isSummarizing || !selectedLectureDetails.transcript}
                           className="btn-primary shadow-xl hover:shadow-2xl"
                         >
-                          {isSummarizing ? <InlineLoader /> : <div className="flex items-center gap-2"><div className="w-5 h-5 flex items-center justify-center"><div className="w-4 h-4 bg-white/20 rounded-full animate-pulse" /></div> Generate AI Summary</div>}
-                          {isSummarizing ? "" : ""}
+                          {isSummarizing
+                            ? <InlineLoader />
+                            : <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 flex items-center justify-center">
+                                  <div className="w-4 h-4 bg-white/20 rounded-full animate-pulse" />
+                                </div>
+                                Generate AI Summary
+                              </div>
+                          }
                         </button>
                       </div>
                     )}
                   </div>
 
-                  {/* Transcript Section */}
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Mic className="w-5 h-5 text-blue-500" />
@@ -308,7 +301,6 @@ export function Library() {
                       <p className="text-gray-500 italic bg-gray-50 p-4 rounded-lg">No transcript available.</p>
                     )}
                   </div>
-
                 </div>
               </div>
             ) : (
@@ -319,6 +311,7 @@ export function Library() {
           </div>
         </div>
       </div>
+
       {showChat && selectedLectureDetails && (
         <ChatPanel
           lectureId={selectedLectureDetails.id}
