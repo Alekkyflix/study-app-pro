@@ -23,6 +23,8 @@ import { ForgotPassword } from "./pages/auth/ForgotPassword";
 
 import { Consent } from "./pages/auth/Consent";
 
+import { ResetPassword } from "./pages/auth/ResetPassword";
+
 function MainLayout() {
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col">
@@ -46,6 +48,7 @@ function App() {
               <Route path="/splash" element={<Splash />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/consent" element={<Consent />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Public-Only Auth Routes */}
               <Route element={<PublicRoute />}>

@@ -18,15 +18,23 @@ export function Consent() {
     
     setLoading(true);
     try {
-      // 1. Update the database record explicitly
+      // 1. Update the database record (Upsert ensures it's created if it doesn't exist)
       const { error: dbError } = await supabase
         .from('profiles')
-        .update({ recording_consent: true })
-        .eq('id', user.id);
+        .upsert({ 
+          id: user.id, 
+          recording_consent: true,
+          updated_at: new Date().toISOString()
+        });
       
       if (dbError) throw dbError;
 
-      // 2. Mark as onboarded/contented in local storage
+      // 2. Backup: Update auth metadata as well
+      await supabase.auth.updateUser({
+        data: { recording_consent: true }
+      });
+
+      // 3. Mark as onboarded/contented in local storage
       localStorage.setItem('studypro_consent_given', 'true');
       
       showSuccess("Consent Recorded", "You are now authorized to use StudyPro features.");
