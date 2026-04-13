@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "public": true,
+  "name": "study-pro-unified",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/frontend/(.*)",
+      "destination": "/$1",
+      "permanent": true
+    }
+  ]
+}
