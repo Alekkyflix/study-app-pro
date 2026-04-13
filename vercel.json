@@ -1,22 +1,12 @@
 {
   "version": 2,
-  "public": true,
   "name": "study-pro-unified",
+  "buildCommand": "cd frontend && npm install --include=dev && npm run build",
+  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/frontend/$1"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/frontend/(.*)",
-      "destination": "/$1",
-      "permanent": true
+      "destination": "/index.html"
     }
   ]
 }
