@@ -4,6 +4,8 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
+import { PublicRoute } from "./components/PublicRoute";
+
 import { Home } from "./pages/Home";
 import { Library } from "./pages/Library";
 import { Chat } from "./pages/Chat";
@@ -39,13 +41,17 @@ function App() {
         <SettingsProvider>
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
-              {/* Public / Auth Routes */}
+              {/* Splash & Onboarding are special logic routes */}
               <Route path="/splash" element={<Splash />} />
               <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/verify-email" element={<EmailVerification />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
+
+              {/* Public-Only Auth Routes */}
+              <Route element={<PublicRoute />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="/verify-email" element={<EmailVerification />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+              </Route>
 
               {/* Protected App Routes */}
               <Route element={<ProtectedRoute />}>

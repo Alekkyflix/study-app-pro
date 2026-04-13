@@ -7,7 +7,7 @@ export function Onboarding() {
   const [slide, setSlide] = useState(0);
   const [consentGiven, setConsentGiven] = useState(false);
   const navigate = useNavigate();
-  const { setRequireOnboarding } = useAuth();
+  const { setRequireOnboarding, user } = useAuth();
 
   const slides = [
     {
@@ -31,7 +31,13 @@ export function Onboarding() {
     if (!consentGiven) return;
     localStorage.setItem('studypro_onboarded', 'true');
     setRequireOnboarding(false);
-    navigate('/signup');
+    
+    // If user is already authenticated (e.g. OAuth), go home. Otherwise go to signup.
+    if (user) {
+      navigate('/');
+    } else {
+      navigate('/signup');
+    }
   };
 
   return (
