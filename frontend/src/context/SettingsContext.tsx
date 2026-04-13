@@ -16,7 +16,7 @@ export interface SettingsState {
   accentColor: AccentColor;
   fontSize: FontSize;
   language: 'english' | 'swahili';
-  transcriptLanguage: string; // 'auto', 'english', etc.
+  transcriptLanguage: string;
   audioQuality: AudioQuality;
   recordingFormat: RecordingFormat;
   autoStop: boolean;
@@ -29,7 +29,7 @@ export interface SettingsState {
   transcriptionModel: 'fast' | 'balanced' | 'accurate';
   autoTranscribe: boolean;
   speakerDetection: boolean;
-  timestampInterval: number; // 0 for none, 1, 5, 10
+  timestampInterval: number;
   autoPunctuation: boolean;
   autoCapitalization: boolean;
   removeFillerWords: boolean;
@@ -46,7 +46,7 @@ export interface SettingsState {
   notifyStorage: boolean;
   studyReminders: boolean;
   studyReminderTime: string;
-  studyReminderDays: number[]; // 0-6
+  studyReminderDays: number[];
   biometricLock: boolean;
   wifiOnly: boolean;
   analyticsEnabled: boolean;
@@ -99,7 +99,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   keepTranscriptsOnCleanup: true,
 };
 
-interface ProfileData {
+export interface ProfileData {
   full_name: string;
   phone_number: string;
   university: string;
@@ -115,7 +115,9 @@ interface SettingsContextType {
   settings: SettingsState;
   profile: ProfileData | null;
   updateSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => Promise<void>;
-  updateProfile: (data: Partial<ProfileData>) => Promise<void>;
+  // FIX: Added `silent` flag so Consent.tsx can call updateProfile without
+  // triggering the generic "Profile Updated" success toast.
+  updateProfile: (data: Partial<ProfileData>, silent?: boolean) => Promise<void>;
   resetToDefaults: () => Promise<void>;
   loading: boolean;
 }
@@ -123,32 +125,37 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { showSuccess, showError, showInfo, showMiniToast } = useNotification();
   const [settings, setSettings] = useState<SettingsState>(() => {
     const saved = localStorage.getItem('studypro_settings');
     return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
   });
   const [profile, setProfile] = useState<ProfileData | null>(null);
+
+  // FIX: Start loading=true and only resolve it once auth itself has settled.
+  // Previously this started true but could flip to false after 500ms even
+  // while auth was still resolving, causing ProtectedRoute to flash.
   const [loading, setLoading] = useState(true);
 
-  // Sync settings to localStorage
+  // Sync settings to localStorage and apply theme/accent
   useEffect(() => {
     localStorage.setItem('studypro_settings', JSON.stringify(settings));
-    
-    // Apply theme
+
     const root = window.document.documentElement;
-    const effectiveTheme = settings.theme === 'system' 
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : settings.theme;
-    
+    const effectiveTheme =
+      settings.theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : settings.theme;
+
     if (effectiveTheme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
 
-    // Apply Accent Color Variable (HACK: using CSS variables)
     const colors: Record<AccentColor, string> = {
       blue: '#3b82f6',
       green: '#10b981',
@@ -157,27 +164,30 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       pink: '#ec4899',
       teal: '#14b8a6',
       red: '#ef4444',
-      yellow: '#eab308'
+      yellow: '#eab308',
     };
     root.style.setProperty('--accent-primary', colors[settings.accentColor]);
   }, [settings.theme, settings.accentColor]);
 
-  // Load from Supabase
+  // Load profile from Supabase once auth has fully resolved
   useEffect(() => {
-    // If auth is still loading, don't update settings loading yet
-    // Wait for the user object to stabilize
+    // FIX: Don't do anything until AuthContext has finished its own getSession()
+    // call. While auth is still loading, keep our loading=true so ProtectedRoute
+    // never renders prematurely.
+    if (authLoading) return;
+
+    // Auth is done. If there is no user, we have nothing to fetch.
     if (!user) {
-      // Small timeout to allow auth to finish before final fallback
-      const timer = setTimeout(() => {
-        if (!user) setLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
+      setProfile(null);
+      setLoading(false);
+      return;
     }
 
     const fetchProfileAndSettings = async () => {
-      setLoading(true); // Ensure we are loading when user changes
+      setLoading(true);
       try {
-        // Use maybeSingle to avoid 406 error when profile doesn't exist yet
+        // maybeSingle() returns null (not an error) when no row is found,
+        // preventing the 406 "Illegal Constructor" crash from .single().
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -186,7 +196,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         if (error) {
           console.error('Error fetching profile from Supabase:', error);
-          // We don't throw here to allow the app to function with fallback metadata
+          // Don't throw — fall through to the metadata fallback below.
         }
 
         if (data) {
@@ -199,14 +209,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             preferred_language: data.preferred_language || 'English',
             avatar_url: data.avatar_url,
             joined_at: data.created_at,
-            recording_consent: data.recording_consent || false
+            recording_consent: data.recording_consent || false,
           });
 
           if (data.settings) {
             setSettings(prev => ({ ...prev, ...data.settings }));
           }
         } else {
-          // Fallback: record doesn't exist in DB, use auth metadata
+          // No DB row yet (new user or deleted profile).
+          // Fall back to auth metadata so we still have something to show.
           const metadata = user.user_metadata || {};
           setProfile({
             full_name: metadata.full_name || '',
@@ -216,11 +227,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             year_of_study: '',
             preferred_language: 'English',
             joined_at: user.created_at || new Date().toISOString(),
-            recording_consent: metadata.recording_consent === true || metadata.recording_consent === 'true'
+            // FIX: Treat explicit boolean OR stringified 'true' from metadata.
+            recording_consent:
+              metadata.recording_consent === true ||
+              metadata.recording_consent === 'true',
           });
-          
-          // Note: We could auto-create the record here, but we'll let it be for now
-          // to avoid side-effects in a fetch effect.
         }
       } catch (err) {
         console.error('Error in profile initialization:', err);
@@ -230,48 +241,52 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     fetchProfileAndSettings();
-  }, [user]);
+  }, [user, authLoading]);
 
-  const updateSetting = useCallback(async <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
-    // Optimistic update
-    setSettings(prev => ({ ...prev, [key]: value }));
-    const updatedSettings = { ...settings, [key]: value };
+  const updateSetting = useCallback(
+    async <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+      setSettings(prev => ({ ...prev, [key]: value }));
+      const updatedSettings = { ...settings, [key]: value };
 
-    // Visual feedback for auto-save
-    if (key !== 'theme' && key !== 'accentColor') {
-       showMiniToast('Saved');
-    }
-
-    if (user) {
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ settings: updatedSettings })
-          .eq('id', user.id);
-        
-        if (error) throw error;
-      } catch (err) {
-        console.error('Error saving setting:', err);
-        showError('Sync Failed', 'Could not save your preferences online.');
+      if (key !== 'theme' && key !== 'accentColor') {
+        showMiniToast('Saved');
       }
-    }
-  }, [user, settings, showError, showMiniToast]);
 
-  const updateProfile = async (data: Partial<ProfileData>) => {
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ settings: updatedSettings })
+            .eq('id', user.id);
+
+          if (error) throw error;
+        } catch (err) {
+          console.error('Error saving setting:', err);
+          showError('Sync Failed', 'Could not save your preferences online.');
+        }
+      }
+    },
+    [user, settings, showError, showMiniToast]
+  );
+
+  // FIX: `silent` param lets callers (like Consent.tsx) skip the generic
+  // success toast and handle their own user feedback instead.
+  const updateProfile = async (data: Partial<ProfileData>, silent = false) => {
     if (!user) return;
     try {
       const { error } = await supabase
         .from('profiles')
-        .upsert({ 
-          id: user.id, 
+        .upsert({
+          id: user.id,
           ...data,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
-      
+
       if (error) throw error;
-      
-      // Update local state immediately. 
-      // If profile was null (fallback mode), initialize it with the new data.
+
+      // Immediately reflect the change in local state.
+      // If profile was null (new user, no DB row), seed it with safe defaults
+      // so downstream consumers don't crash on null access.
       setProfile(prev => {
         if (!prev) {
           return {
@@ -283,29 +298,40 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             preferred_language: 'English',
             joined_at: new Date().toISOString(),
             recording_consent: false,
-            ...data
+            ...data,
           } as ProfileData;
         }
         return { ...prev, ...data };
       });
-      
-      showSuccess('Profile Updated', 'Your biological information is safe with your study buddy.');
+
+      if (!silent) {
+        showSuccess('Profile Updated', 'Your profile has been saved.');
+      }
     } catch (err) {
       console.error('Error updating profile:', err);
+      // Always show errors, even in silent mode.
       showError('Update Failed', 'Could not update profile information.');
+      // Re-throw so the caller (e.g. Consent.tsx) can catch it and show
+      // its own error state / prevent navigation.
+      throw err;
     }
   };
 
   const resetToDefaults = async () => {
     setSettings(DEFAULT_SETTINGS);
     if (user) {
-      await supabase.from('profiles').update({ settings: DEFAULT_SETTINGS }).eq('id', user.id);
+      await supabase
+        .from('profiles')
+        .update({ settings: DEFAULT_SETTINGS })
+        .eq('id', user.id);
     }
     showInfo('Restored', 'All settings have been reset to default.');
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, profile, updateSetting, updateProfile, resetToDefaults, loading }}>
+    <SettingsContext.Provider
+      value={{ settings, profile, updateSetting, updateProfile, resetToDefaults, loading }}
+    >
       {children}
     </SettingsContext.Provider>
   );
