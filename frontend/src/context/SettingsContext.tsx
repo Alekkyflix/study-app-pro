@@ -170,13 +170,17 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const fetchProfileAndSettings = async () => {
       try {
+        // Use maybeSingle to avoid 406 error when profile doesn't exist yet
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching profile from Supabase:', error);
+          // We don't throw here to allow the app to function with fallback metadata
+        }
 
         if (data) {
           setProfile({
@@ -193,9 +197,24 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (data.settings) {
             setSettings(prev => ({ ...prev, ...data.settings }));
           }
+        } else {
+          // Fallback: record doesn't exist in DB, use auth metadata
+          const metadata = user.user_metadata || {};
+          setProfile({
+            full_name: metadata.full_name || '',
+            phone_number: metadata.phone || '',
+            university: metadata.institution || '',
+            course: '',
+            year_of_study: '',
+            preferred_language: 'English',
+            joined_at: user.created_at || new Date().toISOString()
+          });
+          
+          // Note: We could auto-create the record here, but we'll let it be for now
+          // to avoid side-effects in a fetch effect.
         }
       } catch (err) {
-        console.error('Error loading profile:', err);
+        console.error('Error in profile initialization:', err);
       } finally {
         setLoading(false);
       }
