@@ -11,12 +11,12 @@ export function Splash() {
     if (loading) return;
 
     const timer = setTimeout(() => {
-      if (requireOnboarding) {
-        navigate('/onboarding');
-      } else if (user) {
-        navigate('/');
-      } else {
+      if (!user) {
         navigate('/login');
+      } else if (requireOnboarding) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
       }
     }, 2000);
 
