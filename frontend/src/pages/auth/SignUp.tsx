@@ -116,16 +116,34 @@ export function SignUp() {
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Institution (Optional)</label>
             <select 
-              value={institution} onChange={(e) => setInstitution(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium"
+              value={institution && ["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution) ? institution : (institution ? "Other" : "")} 
+              onChange={(e) => {
+                const val = e.target.value;
+                setInstitution(val === "Other" ? "" : val);
+              }}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium text-sm"
             >
               <option value="">Select your university</option>
-              <option value="UoN">University of Nairobi</option>
-              <option value="KU">Kenyatta University</option>
-              <option value="Strathmore">Strathmore University</option>
+              <option value="University of Nairobi">University of Nairobi</option>
+              <option value="Kenyatta University">Kenyatta University</option>
+              <option value="Strathmore University">Strathmore University</option>
               <option value="JKUAT">JKUAT</option>
-              <option value="Other">Other</option>
+              <option value="Moi University">Moi University</option>
+              <option value="Other">Other (Type manually)</option>
             </select>
+
+            {/* Manual Entry Field */}
+            {(!institution || !["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution)) && (
+              <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                <input 
+                  type="text" 
+                  placeholder="Type university name..."
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium text-sm shadow-sm"
+                />
+              </div>
+            )}
           </div>
 
           <div className="relative">

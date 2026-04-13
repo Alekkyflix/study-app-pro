@@ -82,8 +82,11 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Institution</label>
                     <select
-                      value={formData.university}
-                      onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                      value={formData.university && ["University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university) ? formData.university : (formData.university ? "Other" : "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ ...formData, university: val === "Other" ? "" : val });
+                      }}
                       className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold"
                     >
                       <option value="">Select University</option>
@@ -92,8 +95,21 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                       <option value="Strathmore University">Strathmore University</option>
                       <option value="Jomo Kenyatta University">JKUAT</option>
                       <option value="Moi University">Moi University</option>
-                      <option value="Other">Other</option>
+                      <option value="Other">Other (Type manually)</option>
                     </select>
+
+                    {/* Manual Entry Field */}
+                    {(!formData.university || !["University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university)) && (
+                      <motion.input
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        type="text"
+                        placeholder="Type university name..."
+                        value={formData.university}
+                        onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                        className="w-full px-5 py-3 mt-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold text-sm shadow-sm"
+                      />
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Year of Study</label>
