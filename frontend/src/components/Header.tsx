@@ -1,5 +1,6 @@
-import { Mic, Menu, X } from "lucide-react";
+import { Mic, Menu, X, Settings as SettingsIcon, LayoutDashboard, BarChart3, Library as LibraryIcon, Home } from "lucide-react";
 import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -19,16 +20,18 @@ export function Header() {
         </div>
 
         {/* Desktop Menu */}
-        <nav className="hidden md:flex items-center gap-8">
-          <a href="/" className="text-gray-700 hover:text-blue-600 font-medium text-sm">
-            Record
-          </a>
-          <a href="/library" className="text-gray-700 hover:text-blue-600 font-medium text-sm">
-            Library
-          </a>
-          <a href="/reports" className="text-gray-700 hover:text-blue-600 font-medium text-sm">
-            Reports
-          </a>
+        <nav className="hidden md:flex items-center gap-6">
+          <NavLink to="/" label="Record" />
+          <NavLink to="/library" label="Library" />
+          <NavLink to="/analytics" label="Analytics" />
+          <NavLink to="/reports" label="Reports" />
+          <Link 
+            to="/settings" 
+            className="p-2.5 bg-gray-50 text-gray-900 border border-gray-100 rounded-xl hover:bg-gray-100 hover:shadow-sm transition-all"
+            title="Settings"
+          >
+            <SettingsIcon className="w-5 h-5" />
+          </Link>
         </nav>
 
         {/* Mobile Menu Button */}
@@ -46,27 +49,42 @@ export function Header() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <nav className="md:hidden bg-gray-50 border-t border-gray-200 px-4 py-3 space-y-2">
-          <a
-            href="/"
-            className="block px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium"
-          >
-            Record
-          </a>
-          <a
-            href="/library"
-            className="block px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium"
-          >
-            Library
-          </a>
-          <a
-            href="/reports"
-            className="block px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium"
-          >
-            Reports
-          </a>
+        <nav className="md:hidden bg-white border-t border-gray-100 p-4 space-y-2">
+          <MobileNavLink to="/" label="Record" icon={Home} onClick={() => setMenuOpen(false)} />
+          <MobileNavLink to="/library" label="Library" icon={LibraryIcon} onClick={() => setMenuOpen(false)} />
+          <MobileNavLink to="/analytics" label="Analytics" icon={LayoutDashboard} onClick={() => setMenuOpen(false)} />
+          <MobileNavLink to="/reports" label="Reports" icon={BarChart3} onClick={() => setMenuOpen(false)} />
+          <MobileNavLink to="/settings" label="Settings" icon={SettingsIcon} onClick={() => setMenuOpen(false)} />
         </nav>
       )}
     </header>
+  );
+}
+
+function NavLink({ to, label }: { to: string; label: string }) {
+  const location = useLocation();
+  const active = location.pathname === to;
+  return (
+    <Link 
+      to={to} 
+      className={`text-sm font-bold tracking-tight transition-colors ${active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function MobileNavLink({ to, label, icon: Icon, onClick }: any) {
+  const location = useLocation();
+  const active = location.pathname === to;
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${active ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-600 hover:bg-gray-50'}`}
+    >
+      <Icon className="w-5 h-5" />
+      <span className="font-bold tracking-tight">{label}</span>
+    </Link>
   );
 }
