@@ -90,6 +90,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                       className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold"
                     >
                       <option value="">Select University</option>
+                      <option value="Meru University">Meru University</option>
                       <option value="University of Nairobi">University of Nairobi</option>
                       <option value="Kenyatta University">Kenyatta University</option>
                       <option value="Strathmore University">Strathmore University</option>
