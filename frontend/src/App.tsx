@@ -1,6 +1,8 @@
 // Main App component
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
+import { SettingsProvider } from "./context/SettingsContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 import { Home } from "./pages/Home";
@@ -33,34 +35,38 @@ function MainLayout() {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* Public / Auth Routes */}
-          <Route path="/splash" element={<Splash />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/verify-email" element={<EmailVerification />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+    <NotificationProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              {/* Public / Auth Routes */}
+              <Route path="/splash" element={<Splash />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/verify-email" element={<EmailVerification />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          {/* Protected App Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/chat/:id" element={<Chat />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/settings" element={<Settings />} />
-            </Route>
-          </Route>
+              {/* Protected App Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/library" element={<Library />} />
+                  <Route path="/chat/:id" element={<Chat />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
+              </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Splash />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+              {/* Fallback */}
+              <Route path="*" element={<Splash />} />
+            </Routes>
+          </BrowserRouter>
+        </SettingsProvider>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 

@@ -63,21 +63,39 @@ yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
 
-# Local development
+# Local development & Secrets
 .env
+.env.*
+!.env.example
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Agent/AI Tool Metadata
+.gemini/
+.antigravity/
+.cursor/
+
+# Project Specific
 recordings/
 uploads/
 temp/
 tmp/
+*.db
+*.sqlite
+*.sqlite3
 
-# Build outputs
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Node / Build / OS
+node_modules/
 dist/
 build/
-*.tsbuildinfo
-
-# Dependencies cache
-.npm/
-yarn.lock
-pnpm-lock.yaml
+.next/
+out/
+.DS_Store
+Thumbs.db

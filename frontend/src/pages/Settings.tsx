@@ -1,162 +1,308 @@
-import { Moon, Bell, Lock, LogOut, User, Save } from "lucide-react";
-import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import React, { useState } from 'react';
+import { 
+  User, Palette, Mic, Cpu, Sparkles, Bell, Shield, HardDrive, Info, 
+  Moon, Sun, Monitor, Type, Globe, Volume2, Clock, Trash2, 
+  LogOut, Key, Link as LinkIcon, Database, CheckCircle, ShieldCheck,
+  ChevronRight, Github, Mail, Phone, ExternalLink, HelpCircle, MessageSquare
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { useSettings, AccentColor } from '../context/SettingsContext';
+import { useNotification } from '../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
+
+// Components
+import ProfileCard from '../components/settings/ProfileCard';
+import SettingSection from '../components/settings/SettingSection';
+import SettingRow from '../components/settings/SettingRow';
+import EditProfileModal from '../components/settings/EditProfileModal';
 
 export function Settings() {
-  const { signOut } = useAuth();
-  const [settings, setSettings] = useState({
-    darkMode: false,
-    notifications: true,
-    emailUpdates: true,
-    autoSave: true,
-  });
-  const [name, setName] = useState("Alex Student");
-  const [email, setEmail] = useState("alex@example.com");
-  const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
+  const { signOut, user } = useAuth();
+  const { settings, profile, updateSetting, updateProfile, resetToDefaults, loading: settingsLoading } = useSettings();
+  const { showModal, showSuccess, showError, showInfo } = useNotification();
+  
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  if (settingsLoading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-gray-100 border-t-gray-900 rounded-full animate-spin" />
+          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading Settings</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSignOut = () => {
+    showModal({
+      title: "Log out of StudyPro?",
+      body: "You will need to log in again to access your lectures and summaries.",
+      confirmText: "Log Out",
+      onConfirm: signOut
+    });
   };
 
-  const toggleSetting = (key: keyof typeof settings) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleDeleteAccount = () => {
+    showModal({
+      title: "Delete your account?",
+      body: "This will permanently delete all your lectures, transcripts and summaries. This cannot be undone.",
+      confirmText: "Delete Permanently",
+      confirmStyle: "destructive",
+      onConfirm: () => {
+        showError("Action Restricted", "Account deletion requires manual verification. Contact support@studypro.app");
+      }
+    });
   };
+
+  const accentColors: { name: AccentColor; hex: string }[] = [
+    { name: 'blue', hex: '#3b82f6' },
+    { name: 'green', hex: '#10b981' },
+    { name: 'purple', hex: '#a855f7' },
+    { name: 'orange', hex: '#f97316' },
+    { name: 'pink', hex: '#ec4899' },
+    { name: 'teal', hex: '#14b8a6' },
+    { name: 'red', hex: '#ef4444' },
+    { name: 'yellow', hex: '#eab308' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pb-24 md:pb-8">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-[#fafafa] pb-24 md:pb-12 text-gray-900 tracking-tight">
+      <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your preferences and account</p>
-        </div>
-
-        {/* Profile Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Profile
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Preferences Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Bell className="w-5 h-5" />
-            Preferences
-          </h2>
-          <div className="space-y-4">
-            {[
-              {
-                key: "darkMode" as const,
-                icon: Moon,
-                label: "Dark Mode",
-                desc: "Use dark theme",
-              },
-              {
-                key: "notifications" as const,
-                icon: Bell,
-                label: "Push Notifications",
-                desc: "Enable notifications",
-              },
-              {
-                key: "emailUpdates" as const,
-                icon: Bell,
-                label: "Email Updates",
-                desc: "Weekly study summaries",
-              },
-              {
-                key: "autoSave" as const,
-                icon: Save,
-                label: "Auto-Save",
-                desc: "Automatically save recordings",
-              },
-            ].map(({ key, icon: Icon, label, desc }) => (
-              <div key={key} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Icon className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="font-medium text-gray-900">{label}</p>
-                    <p className="text-sm text-gray-500">{desc}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleSetting(key)}
-                  className={`w-12 h-6 rounded-full transition ${
-                    settings[key] ? "bg-blue-600" : "bg-gray-300"
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 bg-white rounded-full transition ${
-                      settings[key] ? "translate-x-6" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Security Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Security
-          </h2>
-          <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium">
-            Change Password
-          </button>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-4">
-          <button
-            onClick={handleSave}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-          >
-            <Save className="w-5 h-5" />
-            Save Changes
-          </button>
+        <div className="flex items-center gap-4 mb-10">
           <button 
-            onClick={signOut}
-            className="flex-1 bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
-            <LogOut className="w-5 h-5" />
-            Log Out
+            onClick={() => navigate(-1)}
+            className="p-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow active:scale-95"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-900 rotate-180" />
           </button>
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900">Settings</h1>
+            <p className="text-gray-500 font-medium italic">Your study buddy, your rules.</p>
+          </div>
         </div>
 
-        {/* Success Message */}
-        {saved && (
-          <div className="mt-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-            ✅ Changes saved successfully!
+        {/* Profile Card */}
+        <ProfileCard
+          name={profile.full_name}
+          email={user?.email || ''}
+          university={profile.university}
+          joinedDate={profile.joined_at}
+          onEdit={() => setIsEditProfileOpen(true)}
+        />
+
+        {/* Section 1: Account */}
+        <SettingSection title="Profile & Account">
+          <SettingRow 
+            icon={Key} 
+            label="Change Password" 
+            onClick={() => showInfo('Password Reset', 'Redirecting to secure password reset flow...')} 
+          />
+          <SettingRow 
+            icon={LinkIcon} 
+            label="Linked Accounts" 
+            value="Google Connected"
+            onClick={() => {}}
+          />
+          <SettingRow 
+            icon={ShieldCheck} 
+            label="Email Verification" 
+            value="Verified"
+            disabled
+          />
+          <SettingRow 
+            icon={LogOut} 
+            label="Sign Out" 
+            type="danger"
+            onClick={handleSignOut}
+          />
+        </SettingSection>
+
+        {/* Section 2: Appearance */}
+        <SettingSection title="Appearance">
+          <div className="p-4 border-b border-gray-50 bg-gray-50/20">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 ml-1">Accent Color</p>
+            <div className="flex items-center justify-between px-2">
+              {accentColors.map((color) => (
+                <button
+                  key={color.name}
+                  onClick={() => updateSetting('accentColor', color.name)}
+                  className={`
+                    w-8 h-8 rounded-full transition-all transform hover:scale-110 active:scale-90
+                    ${settings.accentColor === color.name ? 'ring-4 ring-offset-2 ring-gray-900 scale-110' : ''}
+                  `}
+                  style={{ backgroundColor: color.hex }}
+                />
+              ))}
+            </div>
           </div>
-        )}
+          
+          <SettingRow 
+            icon={settings.theme === 'dark' ? Moon : settings.theme === 'light' ? Sun : Monitor} 
+            label="Theme" 
+            type="select"
+            value={settings.theme}
+            options={[
+              { label: 'Light', value: 'light' },
+              { label: 'Dark', value: 'dark' },
+              { label: 'System', value: 'system' },
+            ]}
+            onChange={(val) => updateSetting('theme', val)}
+          />
+          
+          <div className="p-4 border-b border-gray-50">
+             <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center">
+                   <Type className="w-5 h-5" />
+                </div>
+                <p className="font-bold text-gray-900 flex-1">Font Size</p>
+                <span className="text-xs font-black uppercase bg-gray-100 px-2 py-1 rounded-md text-gray-500">
+                   {settings.fontSize}
+                </span>
+             </div>
+             <input 
+               type="range" 
+               min="0" max="3" step="1"
+               value={['small', 'default', 'large', 'extra-large'].indexOf(settings.fontSize)}
+               onChange={(e) => {
+                 const sizes: ['small', 'default', 'large', 'extra-large'] = ['small', 'default', 'large', 'extra-large'];
+                 updateSetting('fontSize', sizes[parseInt(e.target.value)] as any);
+               }}
+               className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-gray-900"
+             />
+             <div className="flex justify-between mt-2 px-1">
+                <span className="text-[10px] font-bold text-gray-300">A</span>
+                <span className="text-[20px] font-bold text-gray-300">A</span>
+             </div>
+          </div>
+
+          <SettingRow 
+            icon={Globe} 
+            label="App Language" 
+            type="select"
+            value={settings.language}
+            options={[
+              { label: 'English', value: 'english' },
+              { label: 'Swahili', value: 'swahili' },
+            ]}
+            onChange={(val) => updateSetting('language', val)}
+          />
+        </SettingSection>
+
+        {/* Section 3: Recording Settings */}
+        <SettingSection title="Recording">
+          <SettingRow 
+            icon={Volume2} 
+            label="Audio Quality" 
+            description={settings.audioQuality === 'low' ? '~28MB/hr' : settings.audioQuality === 'standard' ? '~56MB/hr' : '~112MB/hr'}
+            type="select"
+            value={settings.audioQuality}
+            options={[
+              { label: 'Low', value: 'low' },
+              { label: 'Standard', value: 'standard' },
+              { label: 'High', value: 'high' },
+            ]}
+            onChange={(val) => updateSetting('audioQuality', val)}
+          />
+          <SettingRow icon={Clock} label="Auto-Stop Recording" type="toggle" value={settings.autoStop} onChange={(v) => updateSetting('autoStop', v)} />
+          <SettingRow icon={Monitor} label="Background Recording" description="Allow recording when app is in background" type="toggle" value={settings.backgroundRecording} onChange={(v) => updateSetting('backgroundRecording', v)} />
+          <SettingRow icon={CheckCircle} label="Consent Reminder" description="Kenyan law requirement" type="select" value={settings.consentReminder} options={[{label: 'Always', value: 'always'}, {label: 'First 3 Times', value: '3_times'}, {label: 'Never', value: 'never'}]} onChange={(v) => updateSetting('consentReminder', v)} />
+          
+          <div className="p-6">
+            <div className="flex justify-between items-end mb-2">
+               <p className="text-xs font-black uppercase tracking-widest text-gray-400">Storage Usage</p>
+               <p className="text-xs font-bold text-gray-900">234MB / 2GB</p>
+            </div>
+            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-50 shadow-inner">
+               <div className="h-full bg-gray-900 w-[12%] rounded-full shadow-lg" />
+            </div>
+            <button className="mt-4 text-xs font-bold text-gray-400 hover:text-gray-900 transition-colors uppercase tracking-[0.1em]">Clear Cached Files</button>
+          </div>
+        </SettingSection>
+
+        {/* Section 4: Transcription Settings */}
+        <SettingSection title="Transcription">
+          <SettingRow icon={Cpu} label="AI Model" type="select" value={settings.transcriptionModel} options={[{label: 'Fast', value: 'fast'}, {label: 'Balanced', value: 'balanced'}, {label: 'Accurate', value: 'accurate'}]} onChange={(v) => updateSetting('transcriptionModel', v)} />
+          <SettingRow icon={Sparkles} label="Auto-Transcribe" description="Start after recording stops" type="toggle" value={settings.autoTranscribe} onChange={(v) => updateSetting('autoTranscribe', v)} />
+          <SettingRow icon={User} label="Speaker Detection" type="toggle" value={settings.speakerDetection} onChange={(v) => updateSetting('speakerDetection', v)} />
+          <SettingRow icon={Type} label="Auto-Punctuation" type="toggle" value={settings.autoPunctuation} onChange={(v) => updateSetting('autoPunctuation', v)} />
+        </SettingSection>
+
+        {/* Section 5: AI & Summarization */}
+        <SettingSection title="AI & Summarization">
+          <SettingRow icon={Monitor} label="AI Provider" type="select" value={settings.aiProvider} options={[{label: 'Google Gemini', value: 'gemini'}, {label: 'OpenAI GPT', value: 'openai'}, {label: 'Anthropic Claude', value: 'claude'}]} onChange={(v) => updateSetting('aiProvider', v)} />
+          <SettingRow icon={Sparkles} label="Summary Type" type="select" value={settings.summaryType} options={[{label: 'Executive', value: 'executive'}, {label: 'Detailed', value: 'detailed'}, {label: 'Bullet Points', value: 'bullet'}, {label: 'Study Guide', value: 'study_guide'}]} onChange={(v) => updateSetting('summaryType', v)} />
+          
+          <div className="p-5 space-y-3">
+             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Gemini API Key</p>
+             <div className="flex gap-2">
+                <input type="password" placeholder="••••••••••••••••" className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-gray-900 outline-none" />
+                <button className="bg-gray-900 text-white px-4 py-3 rounded-xl font-bold text-xs hover:bg-black transition-all">Test</button>
+             </div>
+             <p className="text-[9px] text-gray-400 italic font-medium leading-tight">Your keys never leave your device. We store them in secure local storage only.</p>
+          </div>
+        </SettingSection>
+
+        {/* Section 6: Notifications */}
+        <SettingSection title="Notifications">
+          <SettingRow icon={Bell} label="Push Notifications" type="toggle" value={settings.notificationsEnabled} onChange={(v) => updateSetting('notificationsEnabled', v)} />
+          <SettingRow icon={Clock} label="Study Reminders" type="toggle" value={settings.studyReminders} onChange={(v) => updateSetting('studyReminders', v)} />
+          <SettingRow icon={Clock} label="Reminder Time" type="nav" value={settings.studyReminderTime} onClick={() => {}} />
+        </SettingSection>
+
+        {/* Section 7: Privacy & Security */}
+        <SettingSection title="Privacy & Security">
+          <SettingRow icon={Shield} label="AI Data Usage" description="Allow AI providers to use data for training" type="toggle" value={settings.aiDataUsage} onChange={(v) => updateSetting('aiDataUsage', v)} />
+          <SettingRow icon={Database} label="Analytics" type="toggle" value={settings.analyticsEnabled} onChange={(v) => updateSetting('analyticsEnabled', v)} />
+          <SettingRow icon={Lock} label="Require Biometrics" type="toggle" value={settings.biometricLock} onChange={(v) => updateSetting('biometricLock', v)} />
+          <SettingRow icon={Trash2} label="Export All My Data" onClick={() => showInfo('Export', 'Preparing your data archive...')} />
+          <SettingRow icon={Trash2} label="DELETE EVERYTHING" type="danger" onClick={handleDeleteAccount} />
+        </SettingSection>
+
+        {/* Section 8: Storage & Performance */}
+        <SettingSection title="Storage & Performance">
+          <SettingRow icon={Globe} label="WiFi Only" description="Important for saving mobile data in Kenya" type="toggle" value={settings.wifiOnly} onChange={(v) => updateSetting('wifiOnly', v)} />
+          <SettingRow icon={HardDrive} label="Auto-Cleanup" description="Delete recordings older than 30 days" type="toggle" value={settings.autoCleanupDays !== null} onChange={(v) => updateSetting('autoCleanupDays', v ? 30 : null)} />
+        </SettingSection>
+
+        {/* Section 9: About & Support */}
+        <SettingSection title="About & Support">
+          <SettingRow icon={Info} label="App Version" value="1.0.0 (build 001)" />
+          <SettingRow icon={HelpCircle} label="Help Center" onClick={() => {}} />
+          <SettingRow icon={MessageSquare} label="Join Community (WhatsApp)" onClick={() => window.open('https://whatsapp.com', '_blank')} />
+          <SettingRow icon={HelpCircle} label="Built with ❤️ in Kenya 🇰🇪" disabled />
+        </SettingSection>
+
+        {/* Bottom Footer Actions */}
+        <div className="mt-12 text-center pb-12">
+           <button 
+             onClick={resetToDefaults}
+             className="text-xs font-black uppercase tracking-widest text-red-400 hover:text-red-500 transition-colors"
+           >
+             Reset all settings to default
+           </button>
+           <p className="mt-8 text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">
+             Powered by Gemini & Faster-Whisper
+           </p>
+        </div>
       </div>
+
+      {/* Modals */}
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        initialData={{
+          full_name: profile.full_name,
+          phone_number: profile.phone_number,
+          university: profile.university,
+          course: profile.course,
+          year_of_study: profile.year_of_study
+        }}
+        onSave={updateProfile}
+      />
     </div>
   );
 }

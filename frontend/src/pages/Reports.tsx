@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../services/api";
 import { ChatPanel } from "../components/ChatPanel";
+import { useNotification } from "../context/NotificationContext";
+import { EmptyState, InlineLoader, LectureSkeleton } from "../components/notifications";
 
 interface Report {
   id: string;
@@ -18,6 +20,7 @@ export function Reports() {
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [chatReport, setChatReport] = useState<{id: string, title: string} | null>(null);
+  const { showError, showSuccess } = useNotification();
 
   useEffect(() => {
     async function fetchReports() {
@@ -61,10 +64,11 @@ export function Reports() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        alert("Report details not found.");
+        showError("Download Failed", "Report details not found.");
       }
     } catch (error) {
       console.error("Failed to download report:", error);
+      showError("Download Failed", "Something went wrong while fetching the report.");
     } finally {
       setDownloadingId(null);
     }
@@ -115,11 +119,11 @@ export function Reports() {
         <div className="space-y-4">
           <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-6">Recent Reports</h2>
           {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <Loader className="w-8 h-8 text-gray-900 animate-spin" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => <LectureSkeleton key={i} />)}
             </div>
           ) : reports.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50/50 rounded-3xl border border-gray-100 text-gray-500 font-medium">No reports generated yet.</div>
+            <EmptyState type="lectures" actionLabel="Record Now" onAction={() => navigate("/")} />
           ) : (
             reports.map((report) => (
             <div
@@ -159,8 +163,8 @@ export function Reports() {
                       disabled={downloadingId === report.id}
                       className="btn-primary h-11 w-full md:w-auto text-sm shadow-none"
                     >
-                      {downloadingId === report.id ? <Loader className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                      {downloadingId === report.id ? "Fetching..." : "Download"}
+                      {downloadingId === report.id ? <InlineLoader /> : <Download className="w-4 h-4" />}
+                      {downloadingId === report.id ? "" : "Download"}
                     </button>
                   </>
                 )}

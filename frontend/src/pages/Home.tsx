@@ -6,6 +6,8 @@ import { Waveform } from "../components/Waveform";
 import { ChatPanel } from "../components/ChatPanel";
 import { ReportPanel } from "../components/ReportPanel";
 import { apiClient } from "../services/api";
+import { useNotification } from "../context/NotificationContext";
+import { EmptyState, InlineLoader, RecordingIndicator, OnboardingTooltip } from "../components/notifications";
 
 export function Home() {
   const [isRecording, setIsRecording] = useState(false);
@@ -13,6 +15,20 @@ export function Home() {
   const [lectureTitle, setLectureTitle] = useState("");
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const { showSuccess, showError, showWarning, showInfo, showConsent, setLoading: setGlobalLoading } = useNotification();
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    const tutorialDone = localStorage.getItem("studypro_tutorial_done");
+    if (!tutorialDone) {
+      setShowTooltip(true);
+    }
+  }, []);
+
+  const dismissTooltip = () => {
+    setShowTooltip(false);
+    localStorage.setItem("studypro_tutorial_done", "true");
+  };
   
   // State for managing lecture after saving
   const [currentLectureId, setCurrentLectureId] = useState<string | null>(null);
@@ -40,53 +56,56 @@ export function Home() {
   };
 
   const handleRecord = async () => {
-    try {
-      await initAudioContext();
+    showConsent(async () => {
+      try {
+        await initAudioContext();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-      });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+        });
 
-      streamRef.current = stream;
+        streamRef.current = stream;
 
-      // Setup audio analysis
-      const audioContext = audioContextRef.current!;
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      source.connect(analyser);
-      analyserRef.current = analyser;
+        // Setup audio analysis
+        const audioContext = audioContextRef.current!;
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        analyserRef.current = analyser;
 
-      // Setup media recorder
-      const mediaRecorder = new MediaRecorder(stream);
-      const chunks: BlobPart[] = [];
+        // Setup media recorder
+        const mediaRecorder = new MediaRecorder(stream);
+        const chunks: BlobPart[] = [];
 
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data);
-      };
+        mediaRecorder.ondataavailable = (event) => {
+          chunks.push(event.data);
+        };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob);
-      };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          setAudioBlob(blob);
+          showSuccess("Recording Complete", "Your lecture is ready to review");
+        };
 
-      mediaRecorder.start();
-      mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.start();
+        mediaRecorderRef.current = mediaRecorder;
 
-      setIsRecording(true);
-      setDuration(0);
+        setIsRecording(true);
+        setDuration(0);
 
-      // Start timer
-      timerRef.current = window.setInterval(() => {
-        setDuration((prev) => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      alert("Unable to access microphone. Please check permissions.");
-    }
+        // Start timer
+        timerRef.current = window.setInterval(() => {
+          setDuration((prev) => prev + 1);
+        }, 1000);
+      } catch (error) {
+        console.error("Error accessing microphone:", error);
+        showError("Microphone Access Failed", "Unable to access microphone. Please check permissions.");
+      }
+    });
   };
 
   const handleStop = () => {
@@ -120,17 +139,18 @@ export function Home() {
 
   const handleSave = async () => {
     if (!lectureTitle.trim()) {
-      alert("Please enter a lecture title");
+      showWarning("Title Required", "Please enter a lecture title");
       return;
     }
 
     if (!audioBlob) {
-      alert("No recording to save");
+      showError("No Audio", "No recording to save");
       return;
     }
 
     try {
       setLoading(true);
+      setGlobalLoading(true, "Saving your lecture...");
       setStatus("Creating lecture...");
 
       // Step 1: Create lecture entry
@@ -149,6 +169,7 @@ export function Home() {
         throw new Error(uploadRes.error || "Failed to upload audio");
       }
 
+      showSuccess("Lecture Saved", "Your lecture has been saved successfully");
       setStatus("✅ Lecture saved! Ready for transcription.");
       setLectureTitle("");
       setDuration(0);
@@ -156,9 +177,12 @@ export function Home() {
     } catch (error) {
       console.error("Error saving lecture:", error);
       setStatus(`❌ ${error instanceof Error ? error.message : "Failed to save"}`);
-      alert(`Error: ${error instanceof Error ? error.message : "Failed to save"}`);
+      showError("Save Failed", error instanceof Error ? error.message : "Failed to save lecture", {
+        retry: handleSave
+      });
     } finally {
       setLoading(false);
+      setGlobalLoading(false);
     }
   };
 
@@ -171,6 +195,7 @@ export function Home() {
 
     try {
       setLoading(true);
+      setGlobalLoading(true, isDocument ? "Parsing document..." : "Uploading audio...");
       setStatus("Creating lecture...");
 
       const lectureRes = await apiClient.createLecture(titleToUse);
@@ -183,28 +208,31 @@ export function Home() {
         setStatus("Parsing document...");
         const uploadRes = await apiClient.uploadDocument(lectureId, file);
         if (!uploadRes.success) throw new Error(uploadRes.error || "Failed to parse document");
+        showSuccess("Document Uploaded", "Document parsed successfully!");
         setStatus("✅ Document parsed! Ready for summarization.");
         setTranscript(titleToUse + " document parsed via PDF/TXT parser successfully.");
       } else {
         setStatus("Uploading audio...");
         const uploadRes = await apiClient.uploadAudio(lectureId, file);
         if (!uploadRes.success) throw new Error(uploadRes.error || "Failed to upload audio");
+        showSuccess("Audio Uploaded", "Audio uploaded successfully!");
         setStatus("✅ Audio uploaded! Ready for transcription.");
       }
       
     } catch (error) {
       console.error("Error uploading file:", error);
       setStatus(`❌ ${error instanceof Error ? error.message : "Failed to upload"}`);
-      alert(`Error: ${error instanceof Error ? error.message : "Failed to upload"}`);
+      showError("Upload Failed", error instanceof Error ? error.message : "Failed to upload file");
     } finally {
       setLoading(false);
+      setGlobalLoading(false);
       event.target.value = '';
     }
   };
 
   const handleTranscribe = async () => {
     if (!currentLectureId) {
-      alert("Please save a lecture first");
+      showWarning("Save Required", "Please save a lecture first");
       return;
     }
 
@@ -218,9 +246,11 @@ export function Home() {
       }
 
       setTranscript(result.transcript || "");
+      showSuccess("Transcription Complete", "Your lecture is ready to review");
       setStatus("✅ Transcription complete!");
     } catch (error) {
       console.error("Error transcribing:", error);
+      showError("Transcription Failed", error instanceof Error ? error.message : "Could not process audio");
       setStatus(`❌ Transcription failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setLoading(false);
@@ -229,12 +259,12 @@ export function Home() {
 
   const handleSummarize = async () => {
     if (!currentLectureId) {
-      alert("Please save a lecture first");
+      showWarning("Save Required", "Please save a lecture first");
       return;
     }
 
     if (!transcript) {
-      alert("Please transcribe the lecture first");
+      showWarning("Transcript Required", "Please transcribe the lecture first");
       return;
     }
 
@@ -248,9 +278,11 @@ export function Home() {
       }
 
       setSummary(result.summary || "");
+      showSuccess("Summary Generated", "AI has summarized your lecture");
       setStatus("✅ Summary generated!");
     } catch (error) {
       console.error("Error summarizing:", error);
+      showError("Summarization Failed", error instanceof Error ? error.message : "Could not generate summary");
       setStatus(`❌ Summarization failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setLoading(false);
@@ -259,7 +291,7 @@ export function Home() {
 
   const handleOpenChat = () => {
     if (!transcript) {
-      alert("Please transcribe the lecture first");
+      showInfo("Tip", "You need a transcript to chat with AI");
       return;
     }
     setShowChatPanel(true);
@@ -267,7 +299,7 @@ export function Home() {
 
   const handleOpenReport = () => {
     if (!summary) {
-      alert("Please generate a summary first");
+      showInfo("Tip", "You need a summary to view the report");
       return;
     }
     setShowReportPanel(true);
@@ -305,6 +337,16 @@ export function Home() {
         </div>
 
         {/* Waveform Display */}
+        {isRecording && (
+          <div className="flex justify-center mb-6">
+            <RecordingIndicator duration={(() => {
+              const mins = Math.floor(duration / 60);
+              const secs = duration % 60;
+              return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            })()} />
+          </div>
+        )}
+
         {(isRecording || audioBlob) && (
           <div className="glass-card rounded-3xl p-8 mb-8 premium-shadow">
             <Waveform
@@ -316,10 +358,21 @@ export function Home() {
         )}
 
         {/* Recording Controls */}
-        <div className="glass-card rounded-3xl p-10 mb-8 premium-shadow">
+        <div className="glass-card rounded-3xl p-10 mb-8 premium-shadow relative">
+          {showTooltip && (
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-20">
+              <OnboardingTooltip 
+                message="Tap here to start recording" 
+                onDismiss={dismissTooltip} 
+              />
+            </div>
+          )}
           <RecordingInterface
             isRecording={isRecording}
-            onRecord={handleRecord}
+            onRecord={() => {
+              handleRecord();
+              if (showTooltip) dismissTooltip();
+            }}
             onStop={handleStop}
             onPlay={handlePlay}
             onPause={() => setIsPlaying(false)}
@@ -336,8 +389,8 @@ export function Home() {
               disabled={loading}
               className="btn-primary w-full py-4 text-lg"
             >
-              {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              {loading ? "Saving..." : "Save Lecture"}
+              {loading ? <InlineLoader /> : <Save className="w-5 h-5" />}
+              {loading ? "" : "Save Lecture"}
             </button>
           </div>
         )}
@@ -366,8 +419,8 @@ export function Home() {
                 disabled={loading || !!transcript}
                 className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50"
               >
-                {loading && !transcript ? <Loader className="w-5 h-5 animate-spin mb-1" /> : <Mic className="w-5 h-5 mb-1" />}
-                <span className="text-xs uppercase tracking-wider">{transcript ? "Transcribed" : "Transcribe"}</span>
+                {loading && !transcript ? <InlineLoader /> : <Mic className="w-5 h-5 mb-1" />}
+                <span className="text-xs uppercase tracking-wider mt-1">{transcript ? "Transcribed" : "Transcribe"}</span>
               </button>
 
               <button
@@ -375,8 +428,8 @@ export function Home() {
                 disabled={loading || !transcript || !!summary}
                 className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50"
               >
-                {loading && !summary ? <Loader className="w-5 h-5 animate-spin mb-1" /> : <FileText className="w-5 h-5 mb-1" />}
-                <span className="text-xs uppercase tracking-wider">{summary ? "Summarized" : "Summarize"}</span>
+                {loading && !summary ? <InlineLoader /> : <FileText className="w-5 h-5 mb-1" />}
+                <span className="text-xs uppercase tracking-wider mt-1">{summary ? "Summarized" : "Summarize"}</span>
               </button>
 
               <button
@@ -486,15 +539,12 @@ export function Home() {
         )}
 
         {/* Empty State */}
-        {!isRecording && !audioBlob && (
-          <div className="glass-card rounded-3xl p-12 text-center mt-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mic className="w-6 h-6 text-gray-400" />
-            </div>
-            <p className="text-gray-500 font-medium tracking-tight">
-              Ready to start. Tap the record button above.
-            </p>
-          </div>
+        {!isRecording && !audioBlob && !currentLectureId && (
+          <EmptyState 
+            type="lectures" 
+            onAction={handleRecord} 
+            actionLabel="Start Recording" 
+          />
         )}
       </main>
 

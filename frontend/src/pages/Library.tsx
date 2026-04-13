@@ -2,6 +2,8 @@ import { Search, Download, Trash2, Clock, BookOpen, Loader, FileText, Mic, Messa
 import { useState, useEffect } from "react";
 import { apiClient } from "../services/api";
 import { ChatPanel } from "../components/ChatPanel";
+import { useNotification } from "../context/NotificationContext";
+import { EmptyState, InlineLoader, LectureSkeleton } from "../components/notifications";
 
 interface Lecture {
   id: string;
@@ -57,21 +59,30 @@ export function Library() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this lecture?")) return;
-    try {
-      const res = await apiClient.deleteLecture(id);
-      if (res.success) {
-        setLectures((prev) => prev.filter((l) => l.id !== id));
-        if (selectedLectureId === id) {
-          setSelectedLectureId(null);
-          setSelectedLectureDetails(null);
+    showModal({
+      title: "Delete this lecture?",
+      body: "This will permanently delete the recording, transcript and summary. This cannot be undone.",
+      confirmText: "Delete Lecture",
+      confirmStyle: "destructive",
+      onConfirm: async () => {
+        try {
+          const res = await apiClient.deleteLecture(id);
+          if (res.success) {
+            setLectures((prev) => prev.filter((l) => l.id !== id));
+            showSuccess("Lecture Deleted", "Lecture removed from your library");
+            if (selectedLectureId === id) {
+              setSelectedLectureId(null);
+              setSelectedLectureDetails(null);
+            }
+          } else {
+            showError("Delete Failed", "Failed to delete the lecture.");
+          }
+        } catch (error) {
+          console.error("Error deleting:", error);
+          showError("Error", "Could not delete lecture. Please try again.");
         }
-      } else {
-        alert("Failed to delete the lecture.");
       }
-    } catch (error) {
-      console.error("Error deleting:", error);
-    }
+    });
   };
 
   const handleGenerateSummary = async () => {
@@ -80,6 +91,7 @@ export function Library() {
     try {
       const res = await apiClient.summarizeLecture(selectedLectureId);
       if (res.success) {
+        showSuccess("Summary Generated", "AI has summarized your lecture");
         const detailsRes = await apiClient.getLecture(selectedLectureId);
         if (detailsRes.success) {
           setSelectedLectureDetails(detailsRes.lecture);
@@ -88,11 +100,11 @@ export function Library() {
         const listRes = await apiClient.getLectures();
         if (listRes.success) setLectures(listRes.lectures);
       } else {
-        alert("Failed to generate summary: " + (res.error || "Unknown error from server."));
+        showError("Summarization Failed", (res.error || "Unknown error from server."));
       }
     } catch (error) {
       console.error("Error generating summary:", error);
-      alert("Error reaching the server. Please check your connection.");
+      showError("Connection Error", "Error reaching the server. Please check your connection.");
     } finally {
       setIsSummarizing(false);
     }
@@ -149,8 +161,10 @@ export function Library() {
             
             <div className="overflow-y-auto flex-1 p-2 space-y-1">
               {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <Loader className="w-8 h-8 text-blue-600 animate-spin" />
+                <div className="p-4 space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <LectureSkeleton key={i} />
+                  ))}
                 </div>
               ) : filtered.length > 0 ? (
                 filtered.map((lecture) => (
@@ -181,10 +195,7 @@ export function Library() {
                   </button>
                 ))
               ) : (
-                <div className="p-8 text-center text-gray-500">
-                  <BookOpen className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm">No lectures found</p>
-                </div>
+                <EmptyState type="search" />
               )}
             </div>
           </div>
@@ -199,8 +210,10 @@ export function Library() {
               </div>
             ) : loadingDetails ? (
               <div className="flex-1 flex flex-col items-center justify-center">
-                <Loader className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-                <p className="text-gray-500">Loading lecture details...</p>
+                <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6">
+                   <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+                </div>
+                <p className="text-gray-500 font-bold">Fetching details...</p>
               </div>
             ) : selectedLectureDetails ? (
               <div className="flex flex-col h-full overflow-y-auto pr-2">
@@ -274,8 +287,8 @@ export function Library() {
                           disabled={isSummarizing || !selectedLectureDetails.transcript}
                           className="btn-primary shadow-xl hover:shadow-2xl"
                         >
-                          {isSummarizing ? <Loader className="w-5 h-5 animate-spin mr-2" /> : <FileText className="w-5 h-5 mr-2" />}
-                          {isSummarizing ? "Analyzing Lecture..." : selectedLectureDetails.transcript ? "Generate AI Summary" : "Requires Transcript"}
+                          {isSummarizing ? <InlineLoader /> : <div className="flex items-center gap-2"><div className="w-5 h-5 flex items-center justify-center"><div className="w-4 h-4 bg-white/20 rounded-full animate-pulse" /></div> Generate AI Summary</div>}
+                          {isSummarizing ? "" : ""}
                         </button>
                       </div>
                     )}
