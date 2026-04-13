@@ -19,8 +19,9 @@ import { Splash } from "./pages/auth/Splash";
 import { Onboarding } from "./pages/auth/Onboarding";
 import { Login } from "./pages/auth/Login";
 import { SignUp } from "./pages/auth/SignUp";
-import { EmailVerification } from "./pages/auth/EmailVerification";
 import { ForgotPassword } from "./pages/auth/ForgotPassword";
+
+import { Consent } from "./pages/auth/Consent";
 
 function MainLayout() {
   return (
@@ -44,12 +45,12 @@ function App() {
               {/* Splash & Onboarding are special logic routes */}
               <Route path="/splash" element={<Splash />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/consent" element={<Consent />} />
 
               {/* Public-Only Auth Routes */}
               <Route element={<PublicRoute />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<SignUp />} />
-                <Route path="/verify-email" element={<EmailVerification />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
 

@@ -54,8 +54,7 @@ export function SignUp() {
           throw error;
         }
       } else {
-        localStorage.setItem('studypro_verification_email', email);
-        navigate('/verify-email');
+        navigate('/');
       }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes('rate limit')) {

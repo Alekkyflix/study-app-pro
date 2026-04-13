@@ -108,6 +108,7 @@ interface ProfileData {
   preferred_language: string;
   avatar_url?: string;
   joined_at: string;
+  recording_consent: boolean;
 }
 
 interface SettingsContextType {
@@ -191,7 +192,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             year_of_study: data.year_of_study || '',
             preferred_language: data.preferred_language || 'English',
             avatar_url: data.avatar_url,
-            joined_at: data.created_at
+            joined_at: data.created_at,
+            recording_consent: data.recording_consent || false
           });
 
           if (data.settings) {
@@ -207,7 +209,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             course: '',
             year_of_study: '',
             preferred_language: 'English',
-            joined_at: user.created_at || new Date().toISOString()
+            joined_at: user.created_at || new Date().toISOString(),
+            recording_consent: metadata.recording_consent === true || metadata.recording_consent === 'true'
           });
           
           // Note: We could auto-create the record here, but we'll let it be for now

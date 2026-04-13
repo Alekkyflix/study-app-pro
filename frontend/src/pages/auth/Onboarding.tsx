@@ -28,7 +28,6 @@ export function Onboarding() {
   ];
 
   const handleFinish = () => {
-    if (!consentGiven) return;
     localStorage.setItem('studypro_onboarded', 'true');
     setRequireOnboarding(false);
     
@@ -60,24 +59,6 @@ export function Onboarding() {
         <h2 className="text-3xl font-extrabold tracking-tighter text-gray-900 mb-4">{slides[slide].title}</h2>
         <p className="text-gray-500 font-medium mb-12">{slides[slide].desc}</p>
 
-        {slide === 2 && (
-          <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl mb-8 text-left">
-             <h4 className="font-bold text-orange-900 text-sm mb-2 uppercase tracking-wide">Recording Consent Notice</h4>
-             <p className="text-xs text-orange-800 leading-relaxed mb-4">
-               By using StudyPro, you agree to only record lectures with the explicit permission of the speaker. Unauthorized recording may violate Kenyan law and university policies.
-             </p>
-             <label className="flex items-start gap-3 cursor-pointer">
-               <input 
-                  type="checkbox" 
-                  checked={consentGiven} 
-                  onChange={(e) => setConsentGiven(e.target.checked)}
-                  className="mt-1 w-4 h-4 text-gray-900 border-gray-300 rounded focus:ring-gray-900 pointer-events-auto"
-               />
-               <span className="text-sm font-bold text-gray-900">I Understand & Agree</span>
-             </label>
-          </div>
-        )}
-
         <div className="flex items-center justify-between w-full mt-auto mb-8">
           <button 
             onClick={() => setSlide(s => Math.max(0, s - 1))}
@@ -102,8 +83,7 @@ export function Onboarding() {
           ) : (
             <button 
               onClick={handleFinish}
-              disabled={!consentGiven}
-              className="px-6 py-4 rounded-full bg-gray-900 text-white font-bold tracking-tight hover:bg-black transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-4 rounded-full bg-gray-900 text-white font-bold tracking-tight hover:bg-black transition shadow-lg"
             >
               Get Started
             </button>
