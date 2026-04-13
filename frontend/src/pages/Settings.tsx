@@ -2,16 +2,14 @@ import React, { useState } from 'react';
 import { 
   User, Palette, Mic, Cpu, Sparkles, Bell, Shield, HardDrive, Info, 
   Moon, Sun, Monitor, Type, Globe, Volume2, Clock, Trash2, 
-  LogOut, Key, Link as LinkIcon, Database, CheckCircle, ShieldCheck,
-  ChevronRight, Github, Mail, Phone, ExternalLink, HelpCircle, MessageSquare
+  LogOut, Key, Link as LinkIcon, ShieldCheck,
+  ChevronRight, HelpCircle, MessageSquare
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useSettings, AccentColor } from '../context/SettingsContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 
-// Components
 import ProfileCard from '../components/settings/ProfileCard';
 import SettingSection from '../components/settings/SettingSection';
 import SettingRow from '../components/settings/SettingRow';
@@ -20,9 +18,8 @@ import EditProfileModal from '../components/settings/EditProfileModal';
 export function Settings() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const { settings, profile, updateSetting, updateProfile, resetToDefaults, loading: settingsLoading } = useSettings();
+  const { settings, profile, updateSetting, updateProfile, loading: settingsLoading } = useSettings();
   const { showModal, showSuccess, showError, showInfo } = useNotification();
-  
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   if (settingsLoading || !profile) {
@@ -39,7 +36,7 @@ export function Settings() {
   const handleSignOut = () => {
     showModal({
       title: "Log out of StudyPro?",
-      body: "You will need to log in again to access your lectures and summaries.",
+      body: "You will need to log in again to access your lectures.",
       confirmText: "Log Out",
       onConfirm: signOut
     });
@@ -52,7 +49,7 @@ export function Settings() {
       confirmText: "Delete Permanently",
       confirmStyle: "destructive",
       onConfirm: () => {
-        showError("Action Restricted", "Account deletion requires manual verification. Contact support@studypro.app");
+        showError("Action Restricted", "Contact support@studypro.app to delete your account.");
       }
     });
   };
@@ -71,9 +68,10 @@ export function Settings() {
   return (
     <div className="min-h-screen bg-[#fafafa] pb-24 md:pb-12 text-gray-900 tracking-tight">
       <div className="max-w-4xl mx-auto px-4 py-12">
+
         {/* Header */}
         <div className="flex items-center gap-4 mb-10">
-          <button 
+          <button
             onClick={() => navigate(-1)}
             className="p-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow active:scale-95"
           >
@@ -94,34 +92,28 @@ export function Settings() {
           onEdit={() => setIsEditProfileOpen(true)}
         />
 
-        {/* Section 1: Account */}
-        <SettingSection title="Profile & Account">
-          <SettingRow 
-            icon={Key} 
-            label="Change Password" 
-            onClick={() => showInfo('Password Reset', 'Redirecting to secure password reset flow...')} 
+        {/* Account */}
+        <SettingSection title="Account">
+          <SettingRow
+            icon={Key}
+            label="Change Password"
+            onClick={() => showInfo('Password Reset', 'Redirecting to secure password reset flow...')}
           />
-          <SettingRow 
-            icon={LinkIcon} 
-            label="Linked Accounts" 
-            value="Google Connected"
-            onClick={() => {}}
-          />
-          <SettingRow 
-            icon={ShieldCheck} 
-            label="Email Verification" 
+          <SettingRow
+            icon={ShieldCheck}
+            label="Email Verification"
             value="Verified"
             disabled
           />
-          <SettingRow 
-            icon={LogOut} 
-            label="Sign Out" 
+          <SettingRow
+            icon={LogOut}
+            label="Sign Out"
             type="danger"
             onClick={handleSignOut}
           />
         </SettingSection>
 
-        {/* Section 2: Appearance */}
+        {/* Appearance */}
         <SettingSection title="Appearance">
           <div className="p-4 border-b border-gray-50 bg-gray-50/20">
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 ml-1">Accent Color</p>
@@ -130,19 +122,17 @@ export function Settings() {
                 <button
                   key={color.name}
                   onClick={() => updateSetting('accentColor', color.name)}
-                  className={`
-                    w-8 h-8 rounded-full transition-all transform hover:scale-110 active:scale-90
-                    ${settings.accentColor === color.name ? 'ring-4 ring-offset-2 ring-gray-900 scale-110' : ''}
-                  `}
+                  className={`w-8 h-8 rounded-full transition-all transform hover:scale-110 active:scale-90
+                    ${settings.accentColor === color.name ? 'ring-4 ring-offset-2 ring-gray-900 scale-110' : ''}`}
                   style={{ backgroundColor: color.hex }}
                 />
               ))}
             </div>
           </div>
-          
-          <SettingRow 
-            icon={settings.theme === 'dark' ? Moon : settings.theme === 'light' ? Sun : Monitor} 
-            label="Theme" 
+
+          <SettingRow
+            icon={settings.theme === 'dark' ? Moon : settings.theme === 'light' ? Sun : Monitor}
+            label="Theme"
             type="select"
             value={settings.theme}
             options={[
@@ -152,36 +142,35 @@ export function Settings() {
             ]}
             onChange={(val) => updateSetting('theme', val)}
           />
-          
+
           <div className="p-4 border-b border-gray-50">
-             <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center">
-                   <Type className="w-5 h-5" />
-                </div>
-                <p className="font-bold text-gray-900 flex-1">Font Size</p>
-                <span className="text-xs font-black uppercase bg-gray-100 px-2 py-1 rounded-md text-gray-500">
-                   {settings.fontSize}
-                </span>
-             </div>
-             <input 
-               type="range" 
-               min="0" max="3" step="1"
-               value={['small', 'default', 'large', 'extra-large'].indexOf(settings.fontSize)}
-               onChange={(e) => {
-                 const sizes: ['small', 'default', 'large', 'extra-large'] = ['small', 'default', 'large', 'extra-large'];
-                 updateSetting('fontSize', sizes[parseInt(e.target.value)] as any);
-               }}
-               className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-gray-900"
-             />
-             <div className="flex justify-between mt-2 px-1">
-                <span className="text-[10px] font-bold text-gray-300">A</span>
-                <span className="text-[20px] font-bold text-gray-300">A</span>
-             </div>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-gray-50 text-gray-500 flex items-center justify-center">
+                <Type className="w-5 h-5" />
+              </div>
+              <p className="font-bold text-gray-900 flex-1">Font Size</p>
+              <span className="text-xs font-black uppercase bg-gray-100 px-2 py-1 rounded-md text-gray-500">
+                {settings.fontSize}
+              </span>
+            </div>
+            <input
+              type="range" min="0" max="3" step="1"
+              value={['small', 'default', 'large', 'extra-large'].indexOf(settings.fontSize)}
+              onChange={(e) => {
+                const sizes: ['small', 'default', 'large', 'extra-large'] = ['small', 'default', 'large', 'extra-large'];
+                updateSetting('fontSize', sizes[parseInt(e.target.value)] as any);
+              }}
+              className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-gray-900"
+            />
+            <div className="flex justify-between mt-2 px-1">
+              <span className="text-[10px] font-bold text-gray-300">A</span>
+              <span className="text-[20px] font-bold text-gray-300">A</span>
+            </div>
           </div>
 
-          <SettingRow 
-            icon={Globe} 
-            label="App Language" 
+          <SettingRow
+            icon={Globe}
+            label="App Language"
             type="select"
             value={settings.language}
             options={[
@@ -192,11 +181,11 @@ export function Settings() {
           />
         </SettingSection>
 
-        {/* Section 3: Recording Settings */}
+        {/* Recording */}
         <SettingSection title="Recording">
-          <SettingRow 
-            icon={Volume2} 
-            label="Audio Quality" 
+          <SettingRow
+            icon={Volume2}
+            label="Audio Quality"
             description={settings.audioQuality === 'low' ? '~28MB/hr' : settings.audioQuality === 'standard' ? '~56MB/hr' : '~112MB/hr'}
             type="select"
             value={settings.audioQuality}
@@ -207,90 +196,164 @@ export function Settings() {
             ]}
             onChange={(val) => updateSetting('audioQuality', val)}
           />
-          <SettingRow icon={Clock} label="Auto-Stop Recording" type="toggle" value={settings.autoStop} onChange={(v) => updateSetting('autoStop', v)} />
-          <SettingRow icon={Monitor} label="Background Recording" description="Allow recording when app is in background" type="toggle" value={settings.backgroundRecording} onChange={(v) => updateSetting('backgroundRecording', v)} />
-          <SettingRow icon={CheckCircle} label="Consent Reminder" description="Kenyan law requirement" type="select" value={settings.consentReminder} options={[{label: 'Always', value: 'always'}, {label: 'First 3 Times', value: '3_times'}, {label: 'Never', value: 'never'}]} onChange={(v) => updateSetting('consentReminder', v)} />
-          
-          <div className="p-6">
-            <div className="flex justify-between items-end mb-2">
-               <p className="text-xs font-black uppercase tracking-widest text-gray-400">Storage Usage</p>
-               <p className="text-xs font-bold text-gray-900">234MB / 2GB</p>
-            </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-50 shadow-inner">
-               <div className="h-full bg-gray-900 w-[12%] rounded-full shadow-lg" />
-            </div>
-            <button className="mt-4 text-xs font-bold text-gray-400 hover:text-gray-900 transition-colors uppercase tracking-[0.1em]">Clear Cached Files</button>
-          </div>
+          <SettingRow
+            icon={Clock}
+            label="Auto-Stop Recording"
+            type="toggle"
+            value={settings.autoStop}
+            onChange={(v) => updateSetting('autoStop', v)}
+          />
+          <SettingRow
+            icon={ShieldCheck}
+            label="Consent Reminder"
+            description="Required by Kenyan law"
+            type="select"
+            value={settings.consentReminder}
+            options={[
+              { label: 'Always', value: 'always' },
+              { label: 'First 3 Times', value: '3_times' },
+              { label: 'Never', value: 'never' }
+            ]}
+            onChange={(v) => updateSetting('consentReminder', v)}
+          />
         </SettingSection>
 
-        {/* Section 4: Transcription Settings */}
+        {/* Transcription */}
         <SettingSection title="Transcription">
-          <SettingRow icon={Cpu} label="AI Model" type="select" value={settings.transcriptionModel} options={[{label: 'Fast', value: 'fast'}, {label: 'Balanced', value: 'balanced'}, {label: 'Accurate', value: 'accurate'}]} onChange={(v) => updateSetting('transcriptionModel', v)} />
-          <SettingRow icon={Sparkles} label="Auto-Transcribe" description="Start after recording stops" type="toggle" value={settings.autoTranscribe} onChange={(v) => updateSetting('autoTranscribe', v)} />
-          <SettingRow icon={User} label="Speaker Detection" type="toggle" value={settings.speakerDetection} onChange={(v) => updateSetting('speakerDetection', v)} />
-          <SettingRow icon={Type} label="Auto-Punctuation" type="toggle" value={settings.autoPunctuation} onChange={(v) => updateSetting('autoPunctuation', v)} />
+          <SettingRow
+            icon={Cpu}
+            label="AI Model"
+            type="select"
+            value={settings.transcriptionModel}
+            options={[
+              { label: 'Fast', value: 'fast' },
+              { label: 'Balanced', value: 'balanced' },
+              { label: 'Accurate', value: 'accurate' }
+            ]}
+            onChange={(v) => updateSetting('transcriptionModel', v)}
+          />
+          <SettingRow
+            icon={Sparkles}
+            label="Auto-Transcribe"
+            description="Start after recording stops"
+            type="toggle"
+            value={settings.autoTranscribe}
+            onChange={(v) => updateSetting('autoTranscribe', v)}
+          />
+          <SettingRow
+            icon={User}
+            label="Speaker Detection"
+            type="toggle"
+            value={settings.speakerDetection}
+            onChange={(v) => updateSetting('speakerDetection', v)}
+          />
         </SettingSection>
 
-        {/* Section 5: AI & Summarization */}
+        {/* AI & Summarization */}
         <SettingSection title="AI & Summarization">
-          <SettingRow icon={Monitor} label="AI Provider" type="select" value={settings.aiProvider} options={[{label: 'Google Gemini', value: 'gemini'}, {label: 'OpenAI GPT', value: 'openai'}, {label: 'Anthropic Claude', value: 'claude'}]} onChange={(v) => updateSetting('aiProvider', v)} />
-          <SettingRow icon={Sparkles} label="Summary Type" type="select" value={settings.summaryType} options={[{label: 'Executive', value: 'executive'}, {label: 'Detailed', value: 'detailed'}, {label: 'Bullet Points', value: 'bullet'}, {label: 'Study Guide', value: 'study_guide'}]} onChange={(v) => updateSetting('summaryType', v)} />
-          
-          <div className="p-5 space-y-3">
-             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Gemini API Key</p>
-             <div className="flex gap-2">
-                <input type="password" placeholder="••••••••••••••••" className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-gray-900 outline-none" />
-                <button className="bg-gray-900 text-white px-4 py-3 rounded-xl font-bold text-xs hover:bg-black transition-all">Test</button>
-             </div>
-             <p className="text-[9px] text-gray-400 italic font-medium leading-tight">Your keys never leave your device. We store them in secure local storage only.</p>
-          </div>
+          <SettingRow
+            icon={Monitor}
+            label="AI Provider"
+            type="select"
+            value={settings.aiProvider}
+            options={[
+              { label: 'Google Gemini', value: 'gemini' },
+              { label: 'OpenAI GPT', value: 'openai' },
+              { label: 'Anthropic Claude', value: 'claude' }
+            ]}
+            onChange={(v) => updateSetting('aiProvider', v)}
+          />
+          <SettingRow
+            icon={Sparkles}
+            label="Summary Type"
+            type="select"
+            value={settings.summaryType}
+            options={[
+              { label: 'Executive', value: 'executive' },
+              { label: 'Detailed', value: 'detailed' },
+              { label: 'Bullet Points', value: 'bullet' },
+              { label: 'Study Guide', value: 'study_guide' }
+            ]}
+            onChange={(v) => updateSetting('summaryType', v)}
+          />
+          <SettingRow
+            icon={Sparkles}
+            label="Auto-Summarize"
+            description="Summarize after transcription completes"
+            type="toggle"
+            value={settings.autoSummarize}
+            onChange={(v) => updateSetting('autoSummarize', v)}
+          />
         </SettingSection>
 
-        {/* Section 6: Notifications */}
+        {/* Notifications */}
         <SettingSection title="Notifications">
-          <SettingRow icon={Bell} label="Push Notifications" type="toggle" value={settings.notificationsEnabled} onChange={(v) => updateSetting('notificationsEnabled', v)} />
-          <SettingRow icon={Clock} label="Study Reminders" type="toggle" value={settings.studyReminders} onChange={(v) => updateSetting('studyReminders', v)} />
-          <SettingRow icon={Clock} label="Reminder Time" type="nav" value={settings.studyReminderTime} onClick={() => {}} />
+          <SettingRow
+            icon={Bell}
+            label="Push Notifications"
+            type="toggle"
+            value={settings.notificationsEnabled}
+            onChange={(v) => updateSetting('notificationsEnabled', v)}
+          />
+          <SettingRow
+            icon={Clock}
+            label="Study Reminders"
+            type="toggle"
+            value={settings.studyReminders}
+            onChange={(v) => updateSetting('studyReminders', v)}
+          />
         </SettingSection>
 
-        {/* Section 7: Privacy & Security */}
+        {/* Privacy & Security */}
         <SettingSection title="Privacy & Security">
-          <SettingRow icon={Shield} label="AI Data Usage" description="Allow AI providers to use data for training" type="toggle" value={settings.aiDataUsage} onChange={(v) => updateSetting('aiDataUsage', v)} />
-          <SettingRow icon={Database} label="Analytics" type="toggle" value={settings.analyticsEnabled} onChange={(v) => updateSetting('analyticsEnabled', v)} />
-          <SettingRow icon={ShieldCheck} label="Require Biometrics" type="toggle" value={settings.biometricLock} onChange={(v) => updateSetting('biometricLock', v)} />
-          <SettingRow icon={Trash2} label="Export All My Data" onClick={() => showInfo('Export', 'Preparing your data archive...')} />
-          <SettingRow icon={Trash2} label="DELETE EVERYTHING" type="danger" onClick={handleDeleteAccount} />
+          <SettingRow
+            icon={Shield}
+            label="AI Data Usage"
+            description="Allow AI providers to use data for training"
+            type="toggle"
+            value={settings.aiDataUsage}
+            onChange={(v) => updateSetting('aiDataUsage', v)}
+          />
+          <SettingRow
+            icon={Globe}
+            label="WiFi Only for AI"
+            description="Saves mobile data — recommended in Kenya"
+            type="toggle"
+            value={settings.wifiOnly}
+            onChange={(v) => updateSetting('wifiOnly', v)}
+          />
+          <SettingRow
+            icon={Trash2}
+            label="Export All My Data"
+            onClick={() => showInfo('Export', 'Preparing your data archive...')}
+          />
+          <SettingRow
+            icon={Trash2}
+            label="Delete Account"
+            type="danger"
+            onClick={handleDeleteAccount}
+          />
         </SettingSection>
 
-        {/* Section 8: Storage & Performance */}
-        <SettingSection title="Storage & Performance">
-          <SettingRow icon={Globe} label="WiFi Only" description="Important for saving mobile data in Kenya" type="toggle" value={settings.wifiOnly} onChange={(v) => updateSetting('wifiOnly', v)} />
-          <SettingRow icon={HardDrive} label="Auto-Cleanup" description="Delete recordings older than 30 days" type="toggle" value={settings.autoCleanupDays !== null} onChange={(v) => updateSetting('autoCleanupDays', v ? 30 : null)} />
-        </SettingSection>
-
-        {/* Section 9: About & Support */}
-        <SettingSection title="About & Support">
-          <SettingRow icon={Info} label="App Version" value="1.0.0 (build 001)" />
-          <SettingRow icon={HelpCircle} label="Help Center" onClick={() => {}} />
-          <SettingRow icon={MessageSquare} label="Join Community (WhatsApp)" onClick={() => window.open('https://whatsapp.com', '_blank')} />
+        {/* About */}
+        <SettingSection title="About">
+          <SettingRow icon={Info} label="App Version" value="1.0.0" />
+          <SettingRow
+            icon={MessageSquare}
+            label="Join Community (WhatsApp)"
+            onClick={() => window.open('https://whatsapp.com', '_blank')}
+          />
           <SettingRow icon={HelpCircle} label="Built with ❤️ in Kenya 🇰🇪" disabled />
         </SettingSection>
 
-        {/* Bottom Footer Actions */}
+        {/* Footer */}
         <div className="mt-12 text-center pb-12">
-           <button 
-             onClick={resetToDefaults}
-             className="text-xs font-black uppercase tracking-widest text-red-400 hover:text-red-500 transition-colors"
-           >
-             Reset all settings to default
-           </button>
-           <p className="mt-8 text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">
-             Powered by Gemini & Faster-Whisper
-           </p>
+          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">
+            Powered by Gemini & Faster-Whisper
+          </p>
         </div>
       </div>
 
-      {/* Modals */}
       <EditProfileModal
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}

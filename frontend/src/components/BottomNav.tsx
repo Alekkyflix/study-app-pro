@@ -1,5 +1,5 @@
 import { Home, Library, MessageSquare, BarChart3, Settings, TrendingUp } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 export function BottomNav() {
   const location = useLocation();
@@ -19,9 +19,9 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg md:hidden">
       <div className="flex items-center justify-around h-20">
         {navItems.map(({ path, label, icon: Icon }) => (
-          <a
+          <Link
             key={path}
-            href={path}
+            to={path}
             className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition ${
               isActive(path)
                 ? "text-blue-600 border-t-2 border-blue-600"
@@ -30,7 +30,7 @@ export function BottomNav() {
           >
             <Icon className="w-6 h-6" />
             <span className="text-xs font-medium">{label}</span>
-          </a>
+          </Link>
         ))}
       </div>
     </nav>

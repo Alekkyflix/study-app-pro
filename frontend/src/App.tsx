@@ -1,4 +1,3 @@
-// Main App component
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
@@ -53,7 +52,7 @@ function App() {
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/library" element={<Library />} />
-                  <Route path="/chat/:id" element={<Chat />} />
+                  <Route path="/chat" element={<Chat />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />
