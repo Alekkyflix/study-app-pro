@@ -1,143 +1,186 @@
 """
-Chat API routes - Conversational RAG for Q&A on lectures
+Chat API — conversational RAG over lecture transcripts.
+All routes require a valid Supabase JWT.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
+import logging
+from contextlib import contextmanager
 from datetime import datetime
 
-from app.database.db import SessionLocal
-from app.models.database import Lecture
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
+from app.database.db import SessionLocal
+from app.models.database import ChatMessage, ChatSession, Lecture
+from app.security import get_user_id
+from app.services.rag_service import get_rag_service
+
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])
+
+
+@contextmanager
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 class ChatMessageCreate(BaseModel):
     message: str
 
 
-class ChatMessageResponse(BaseModel):
-    id: int
-    role: str
-    content: str
-    created_at: datetime
+def _get_lecture_or_404(db, lecture_id: str, user_id: str) -> Lecture:
+    lecture = db.query(Lecture).filter(
+        Lecture.id == lecture_id,
+        Lecture.user_id == user_id,
+    ).first()
+    if not lecture:
+        raise HTTPException(status_code=404, detail="Lecture not found")
+    return lecture
 
-    class Config:
-        from_attributes = True
 
-
-@router.post("/lectures/{lecture_id}/chat", response_model=dict)
-async def send_message(lecture_id: int, message_create: ChatMessageCreate):
-    """Send message to RAG chat for a lecture"""
+@router.post("/lectures/{lecture_id}/chat/session", response_model=dict)
+async def send_message(
+    lecture_id: str,
+    message_create: ChatMessageCreate,
+    user_id: str = Depends(get_user_id),
+):
+    """Send a message to the RAG chat for a lecture and get an AI answer."""
     try:
-        db = SessionLocal()
-        lecture = db.query(Lecture).filter(Lecture.id == lecture_id).first()
+        with get_db() as db:
+            lecture = _get_lecture_or_404(db, lecture_id, user_id)
+            if not lecture.transcript:
+                raise HTTPException(status_code=400, detail="No transcript available for this lecture")
 
-        if not lecture:
-            db.close()
-            raise HTTPException(status_code=404, detail="Lecture not found")
+            # Get or create a chat session for this lecture
+            session = db.query(ChatSession).filter(
+                ChatSession.lecture_id == lecture_id
+            ).first()
+            if not session:
+                session = ChatSession(
+                    id=str(__import__("uuid").uuid4()),
+                    lecture_id=lecture_id,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                )
+                db.add(session)
+                db.commit()
+                db.refresh(session)
 
-        if not lecture.transcript:
-            db.close()
-            raise HTTPException(status_code=400, detail="No transcript available for this lecture")
+            # Last 5 messages for context
+            history = (
+                db.query(ChatMessage)
+                .filter(ChatMessage.session_id == session.id)
+                .order_by(ChatMessage.created_at)
+                .all()
+            )[-5:]
 
-        # Get chat history
-        chat_history = (
-            db.query(ChatMessage)
-            .filter(ChatMessage.lecture_id == lecture_id)
-            .order_by(ChatMessage.created_at)
-            .all()
-        )
+            transcript = lecture.transcript
+            session_id = session.id
 
-        # Get RAG service and answer question
-        rag_service = get_rag_service()
-        answer_result = rag_service.answer_question(
+        rag = get_rag_service()
+        result = rag.answer_question(
             question=message_create.message,
-            context_text=lecture.transcript,
-            chat_history=[
-                {"role": msg.role, "text": msg.content} for msg in chat_history[-5:]
-            ],
+            context_text=transcript,
+            chat_history=[{"role": m.role, "text": m.content} for m in history],
         )
 
-        if not answer_result["success"]:
-            db.close()
-            return {"success": False, "error": answer_result.get("error")}
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail="AI could not generate a response")
 
-        # Save user message
-        user_msg = ChatMessage(
-            lecture_id=lecture_id,
-            role="user",
-            content=message_create.message,
-            created_at=datetime.now(),
-        )
-        db.add(user_msg)
+        import uuid as _uuid
+        now = datetime.utcnow()
+        with get_db() as db:
+            db.add(ChatMessage(
+                id=str(_uuid.uuid4()),
+                session_id=session_id,
+                role="user",
+                content=message_create.message,
+                created_at=now,
+            ))
+            db.add(ChatMessage(
+                id=str(_uuid.uuid4()),
+                session_id=session_id,
+                role="assistant",
+                content=result["answer"],
+                created_at=now,
+            ))
+            db.commit()
 
-        # Save assistant message
-        assistant_msg = ChatMessage(
-            lecture_id=lecture_id,
-            role="assistant",
-            content=answer_result["answer"],
-            created_at=datetime.now(),
-        )
-        db.add(assistant_msg)
+        return {"success": True, "message": message_create.message, "answer": result["answer"]}
 
-        db.commit()
-        db.close()
-
-        return {
-            "success": True,
-            "message": message_create.message,
-            "answer": answer_result["answer"],
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("send_message failed")
+        raise HTTPException(status_code=500, detail="Chat request failed")
 
 
 @router.get("/lectures/{lecture_id}/chat/history", response_model=dict)
-async def get_chat_history(lecture_id: int):
-    """Get chat history for a lecture"""
+async def get_chat_history(
+    lecture_id: str,
+    user_id: str = Depends(get_user_id),
+):
+    """Get full chat history for a lecture."""
     try:
-        db = SessionLocal()
-        lecture = db.query(Lecture).filter(Lecture.id == lecture_id).first()
+        with get_db() as db:
+            _get_lecture_or_404(db, lecture_id, user_id)
 
-        if not lecture:
-            db.close()
-            raise HTTPException(status_code=404, detail="Lecture not found")
+            session = db.query(ChatSession).filter(
+                ChatSession.lecture_id == lecture_id
+            ).first()
+            if not session:
+                return {"success": True, "messages": []}
 
-        messages = (
-            db.query(ChatMessage)
-            .filter(ChatMessage.lecture_id == lecture_id)
-            .order_by(ChatMessage.created_at)
-            .all()
-        )
-
-        db.close()
-
-        return {
-            "success": True,
-            "messages": [
-                {
-                    "id": msg.id,
-                    "role": msg.role,
-                    "content": msg.content,
-                    "created_at": msg.created_at.isoformat() if msg.created_at else None,
-                }
-                for msg in messages
-            ],
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+            messages = (
+                db.query(ChatMessage)
+                .filter(ChatMessage.session_id == session.id)
+                .order_by(ChatMessage.created_at)
+                .all()
+            )
+            return {
+                "success": True,
+                "messages": [
+                    {
+                        "id": m.id,
+                        "role": m.role,
+                        "content": m.content,
+                        "created_at": m.created_at.isoformat() if m.created_at else None,
+                    }
+                    for m in messages
+                ],
+            }
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("get_chat_history failed")
+        raise HTTPException(status_code=500, detail="Could not fetch chat history")
 
 
 @router.delete("/lectures/{lecture_id}/chat/history", response_model=dict)
-async def clear_chat_history(lecture_id: int):
-    """Clear chat history for a lecture"""
+async def clear_chat_history(
+    lecture_id: str,
+    user_id: str = Depends(get_user_id),
+):
+    """Clear all chat messages for a lecture."""
     try:
-        db = SessionLocal()
-        db.query(ChatMessage).filter(ChatMessage.lecture_id == lecture_id).delete()
-        db.commit()
-        db.close()
+        with get_db() as db:
+            _get_lecture_or_404(db, lecture_id, user_id)
+
+            session = db.query(ChatSession).filter(
+                ChatSession.lecture_id == lecture_id
+            ).first()
+            if session:
+                db.query(ChatMessage).filter(
+                    ChatMessage.session_id == session.id
+                ).delete()
+                db.commit()
 
         return {"success": True, "message": "Chat history cleared"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("clear_chat_history failed")
+        raise HTTPException(status_code=500, detail="Could not clear history")
