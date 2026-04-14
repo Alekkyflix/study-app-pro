@@ -171,7 +171,6 @@ export function Home() {
 
       showSuccess("Lecture Saved", "Your lecture has been saved successfully");
       setStatus("✅ Lecture saved! Ready for transcription.");
-      setLectureTitle("");
       setDuration(0);
       setAudioBlob(null);
     } catch (error) {
