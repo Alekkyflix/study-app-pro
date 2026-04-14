@@ -84,7 +84,7 @@ class RAGService:
 Be accurate and cite specific parts of the lecture when relevant.
 
 LECTURE MATERIAL:
-{context_text[:3000]}  # Use first 3000 chars to avoid token limit
+{context_text[:100_000]}
 
 Based on this material, provide a clear and educational answer."""
 

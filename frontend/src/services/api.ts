@@ -1,131 +1,145 @@
 import { supabase } from '../lib/supabase';
 
-// API client for backend communication
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const REQUEST_TIMEOUT_MS = 30_000;
 
-const getAuthHeaders = async (existingHeaders: Record<string, string> = {}): Promise<Record<string, string>> => {
+// ---------------------------------------------------------------------------
+// Auth header helper
+// ---------------------------------------------------------------------------
+const getAuthHeaders = async (
+  extra: Record<string, string> = {}
+): Promise<Record<string, string>> => {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.access_token) {
-    return {
-      ...existingHeaders,
-      'Authorization': `Bearer ${session.access_token}`
-    };
+    return { ...extra, Authorization: `Bearer ${session.access_token}` };
   }
-  return existingHeaders;
+  return extra;
 };
 
+// ---------------------------------------------------------------------------
+// Core fetch wrapper — adds auth, timeout, and structured error handling
+// ---------------------------------------------------------------------------
+async function apiFetch(
+  path: string,
+  options: RequestInit = {}
+): Promise<any> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const headers = await getAuthHeaders(
+      (options.headers as Record<string, string>) ?? {}
+    );
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      let detail = `Request failed: ${res.status}`;
+      try {
+        const body = await res.json();
+        detail = body?.detail ?? detail;
+      } catch {}
+      throw new ApiError(detail, res.status);
+    }
+
+    return res.json();
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    if ((err as Error).name === 'AbortError') {
+      throw new ApiError('Request timed out. Please try again.', 408);
+    }
+    throw new ApiError('Network error — check your connection.', 0);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// API client
+// ---------------------------------------------------------------------------
 export class ApiClient {
-  async getLectures() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures`, { headers });
-    return res.json();
+  getLectures() {
+    return apiFetch('/api/lectures');
   }
 
-  async getLecture(id: string) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures/${id}`, { headers });
-    return res.json();
+  getLecture(id: string) {
+    return apiFetch(`/api/lectures/${id}`);
   }
 
-  async createLecture(title: string, description?: string) {
+  createLecture(title: string, description?: string) {
     const formData = new FormData();
-    formData.append("title", title);
-    if (description) formData.append("description", description);
-    
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures`, {
-      method: "POST",
-      headers,
-      body: formData
-    });
-    return res.json();
+    formData.append('title', title);
+    if (description) formData.append('description', description);
+    return apiFetch('/api/lectures', { method: 'POST', body: formData });
   }
 
-  async uploadAudio(lectureId: string, audioBlob: Blob) {
+  uploadAudio(lectureId: string, audioBlob: Blob) {
     const formData = new FormData();
-    formData.append("file", audioBlob, "audio.webm");
-    
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/upload-audio`, {
-      method: "POST",
-      headers,
-      body: formData
+    formData.append('file', audioBlob, 'audio.webm');
+    return apiFetch(`/api/lectures/${lectureId}/upload-audio`, {
+      method: 'POST',
+      body: formData,
     });
-    return res.json();
   }
 
-  async uploadDocument(lectureId: string, file: File) {
+  uploadDocument(lectureId: string, file: File) {
     const formData = new FormData();
-    formData.append("file", file);
-    
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/upload-document`, {
-      method: "POST",
-      headers,
-      body: formData
+    formData.append('file', file);
+    return apiFetch(`/api/lectures/${lectureId}/upload-document`, {
+      method: 'POST',
+      body: formData,
     });
-    return res.json();
   }
 
-  async transcribeLecture(lectureId: string, method: string = "auto") {
-    const headers = await getAuthHeaders({ "Content-Type": "application/json" });
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/transcribe`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ method })
+  transcribeLecture(lectureId: string) {
+    return apiFetch(`/api/lectures/${lectureId}/transcribe`, { method: 'POST' });
+  }
+
+  summarizeLecture(lectureId: string, summaryType = 'executive') {
+    return apiFetch(
+      `/api/lectures/${lectureId}/summarize?summary_type=${summaryType}`,
+      { method: 'POST' }
+    );
+  }
+
+  sendChatMessage(lectureId: string, message: string) {
+    return apiFetch(`/api/lectures/${lectureId}/chat/session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
     });
-    return res.json();
   }
 
-  async getTranscript(lectureId: string) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/transcript`, { headers });
-    return res.json();
+  getChatHistory(lectureId: string) {
+    return apiFetch(`/api/lectures/${lectureId}/chat/history`);
   }
 
-  async summarizeLecture(lectureId: string, summaryType: string = "executive") {
-    const headers = await getAuthHeaders({ "Content-Type": "application/json" });
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/summarize`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ summary_type: summaryType })
+  clearChatHistory(lectureId: string) {
+    return apiFetch(`/api/lectures/${lectureId}/chat/history`, {
+      method: 'DELETE',
     });
-    return res.json();
   }
 
-  async getSummary(lectureId: string) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/summary`, { headers });
-    return res.json();
-  }
-
-  async sendChatMessage(lectureId: string, query: string) {
-    const headers = await getAuthHeaders({ "Content-Type": "application/json" });
-    const res = await fetch(`${API_URL}/api/lectures/${lectureId}/chat`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query })
+  generateReport(lectureIds: string[], reportType: string) {
+    return apiFetch('/api/reports/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lecture_ids: lectureIds, report_type: reportType }),
     });
-    return res.json();
   }
 
-  async generateReport(lectureIds: string[], reportType: string) {
-    const headers = await getAuthHeaders({ "Content-Type": "application/json" });
-    const res = await fetch(`${API_URL}/api/reports/generate`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ lecture_ids: lectureIds, report_type: reportType })
-    });
-    return res.json();
-  }
-
-  async deleteLecture(id: string) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_URL}/api/lectures/${id}`, {
-      method: "DELETE",
-      headers
-    });
-    return res.json();
+  deleteLecture(id: string) {
+    return apiFetch(`/api/lectures/${id}`, { method: 'DELETE' });
   }
 }
 
