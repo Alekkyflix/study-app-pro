@@ -6,6 +6,7 @@ interface ProfileCardProps {
   name: string;
   email: string;
   university: string;
+  yearOfStudy?: string;
   joinedDate: string;
   avatarUrl?: string;
   onEdit: () => void;
@@ -15,6 +16,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   name,
   email,
   university,
+  yearOfStudy,
   joinedDate,
   avatarUrl,
   onEdit
@@ -55,7 +57,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
               <p className="text-xs font-bold text-white leading-none">{university || 'Not Specified'}</p>
             </div>
             <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 leading-none mb-1">Member Since</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Member Since</p>
               <p className="text-xs font-bold text-white leading-none">
                 {new Date(joinedDate).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
               </p>

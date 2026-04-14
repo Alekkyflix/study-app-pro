@@ -56,10 +56,17 @@ export function ChatPanel({ lectureId, lectureTitle, transcript, onClose }: Chat
     try {
       const result = await apiClient.sendChatMessage(lectureId, input);
       
+      let displayContent = result.success && result.response ? result.response : `Sorry, I couldn't process your request. Error: ${result.error || 'Is the AI linked correctly?'}`;
+      
+      // Specifically handle Quota/Rate Limit error messages for a better UX
+      if (displayContent.includes("429") || displayContent.toLowerCase().includes("quota")) {
+        displayContent = "⚠️ Quota limit reached. You are on the Gemini Free Tier, which limits how many questions you can ask per minute. Please wait 60 seconds and try again, or check your API key status in the Supabase Dashboard.";
+      }
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: result.success && result.response ? result.response : `Sorry, I couldn't process your request. Error: ${result.error || 'Is the AI linked correctly?'}`,
+        content: displayContent,
         timestamp: new Date(),
       };
 

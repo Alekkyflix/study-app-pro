@@ -22,11 +22,19 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSave
 }) => {
   const [formData, setFormData] = useState(initialData);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -82,26 +90,44 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Institution</label>
                     <select
-                      value={formData.university}
-                      onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-                      className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold"
+                      value={formData.university && ["Meru University", "University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university) ? formData.university : (formData.university ? "Other" : "")}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ ...formData, university: val === "Other" ? "" : val });
+                      }}
+                      className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold text-sm"
                     >
                       <option value="">Select University</option>
+                      <option value="Meru University">Meru University</option>
                       <option value="University of Nairobi">University of Nairobi</option>
                       <option value="Kenyatta University">Kenyatta University</option>
                       <option value="Strathmore University">Strathmore University</option>
                       <option value="Jomo Kenyatta University">JKUAT</option>
                       <option value="Moi University">Moi University</option>
-                      <option value="Other">Other</option>
+                      <option value="Other">Other (Type manually)</option>
                     </select>
+
+                    {/* Manual Entry Field */}
+                    {(!formData.university || !["Meru University", "University of Nairobi", "Kenyatta University", "Strathmore University", "Jomo Kenyatta University", "Moi University"].includes(formData.university)) && (
+                      <motion.input
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        type="text"
+                        placeholder="Type university name..."
+                        value={formData.university}
+                        onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+                        className="w-full px-5 py-3 mt-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold text-xs shadow-sm"
+                      />
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Year of Study</label>
                     <select
                       value={formData.year_of_study}
                       onChange={(e) => setFormData({ ...formData, year_of_study: e.target.value })}
-                      className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold"
+                      className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-bold text-sm"
                     >
+                      <option value="">Select Year</option>
                       <option value="1st Year">1st Year</option>
                       <option value="2nd Year">2nd Year</option>
                       <option value="3rd Year">3rd Year</option>
@@ -115,10 +141,17 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <div className="space-y-1.5 pt-4">
                   <button
                     type="submit"
-                    className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-lg shadow-xl shadow-gray-200 hover:bg-black transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    disabled={isSaving}
+                    className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-lg shadow-xl shadow-gray-200 hover:bg-black transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                   >
-                    <Check className="w-6 h-6" />
-                    Save Changes
+                    {isSaving ? (
+                      <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-6 h-6" />
+                        Save Changes
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
