@@ -6,7 +6,6 @@ interface ProfileCardProps {
   name: string;
   email: string;
   university: string;
-  course?: string;
   yearOfStudy?: string;
   joinedDate: string;
   avatarUrl?: string;
@@ -17,7 +16,6 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
   name,
   email,
   university,
-  course,
   yearOfStudy,
   joinedDate,
   avatarUrl,
@@ -53,27 +51,15 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
           <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">{name}</h2>
           <p className="text-gray-400 font-medium text-sm mb-3">{email}</p>
           
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
             <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
               <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 leading-none mb-1">Institution</p>
-              <p className="text-xs font-bold text-white leading-none truncate max-w-[150px]">{university || 'Not Specified'}</p>
+              <p className="text-xs font-bold text-white leading-none">{university || 'Not Specified'}</p>
             </div>
-            {course && (
-              <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 leading-none mb-1">Course</p>
-                <p className="text-xs font-bold text-white leading-none truncate max-w-[150px]">{course}</p>
-              </div>
-            )}
-            {yearOfStudy && (
-              <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
-                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Year</p>
-                <p className="text-xs font-bold text-white leading-none">{yearOfStudy}</p>
-              </div>
-            )}
             <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 leading-none mb-1">Since</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 leading-none mb-1">Member Since</p>
               <p className="text-xs font-bold text-white leading-none">
-                {new Date(joinedDate).getFullYear()}
+                {new Date(joinedDate).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
               </p>
             </div>
           </div>
