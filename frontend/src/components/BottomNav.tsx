@@ -7,7 +7,7 @@ export function BottomNav() {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: "/", label: "Record", icon: Home },
+    { path: "/dashboard", label: "Record", icon: Home },
     { path: "/library", label: "Library", icon: Library },
     { path: "/chat", label: "Chat", icon: MessageSquare },
     { path: "/reports", label: "Reports", icon: BarChart3 },
