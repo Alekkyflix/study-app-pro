@@ -116,7 +116,7 @@ export function SignUp() {
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Institution (Optional)</label>
             <select 
-              value={institution && ["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution) ? institution : (institution ? "Other" : "")} 
+              value={institution && ["University of Nairobi", "Meru University", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution) ? institution : (institution ? "Other" : "")} 
               onChange={(e) => {
                 const val = e.target.value;
                 setInstitution(val === "Other" ? "" : val);
@@ -129,11 +129,12 @@ export function SignUp() {
               <option value="Strathmore University">Strathmore University</option>
               <option value="JKUAT">JKUAT</option>
               <option value="Moi University">Moi University</option>
+              <option value="Meru University">Meru University</option>
               <option value="Other">Other (Type manually)</option>
             </select>
 
             {/* Manual Entry Field */}
-            {(!institution || !["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution)) && (
+            {(!institution || !["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University", "Meru University"].includes(institution)) && (
               <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-300">
                 <input 
                   type="text" 
