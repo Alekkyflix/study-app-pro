@@ -6,7 +6,7 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navItems = [
-    { path: "/", label: "Record" },
+    { path: "/dashboard", label: "Record" },
     { path: "/library", label: "Library" },
     { path: "/chat", label: "Chat" },
     { path: "/reports", label: "Reports" },

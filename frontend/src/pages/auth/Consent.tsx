@@ -40,7 +40,7 @@ export function Consent() {
         'You are now authorized to use StudyPro features.'
       );
 
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       // updateProfile already shows an error toast AND re-throws, so we only
       // need to log here. The user has already seen the notification.

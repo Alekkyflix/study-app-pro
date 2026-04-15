@@ -105,7 +105,7 @@ export function Reports() {
           ].map((action, i) => (
             <button
               key={i}
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/dashboard")}
               className="glass-card rounded-3xl p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] text-left premium-shadow border border-gray-100"
             >
               <action.icon className="w-8 h-8 text-gray-900 mb-4" />
@@ -123,7 +123,7 @@ export function Reports() {
               {[1, 2, 3].map((i) => <LectureSkeleton key={i} />)}
             </div>
           ) : reports.length === 0 ? (
-            <EmptyState type="lectures" actionLabel="Record Now" onAction={() => navigate("/")} />
+            <EmptyState type="lectures" actionLabel="Record Now" onAction={() => navigate("/dashboard")} />
           ) : (
             reports.map((report) => (
             <div
@@ -177,7 +177,7 @@ export function Reports() {
         <div className="glass-card rounded-3xl p-12 text-center mt-12">
           <p className="text-gray-500 font-medium tracking-tight mb-6">Want to generate a new report?</p>
           <button 
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="btn-primary mx-auto shadow-xl hover:shadow-2xl"
           >
             Create New Report
