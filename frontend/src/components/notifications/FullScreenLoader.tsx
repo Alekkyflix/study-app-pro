@@ -8,7 +8,7 @@ interface FullScreenLoaderProps {
 
 const FullScreenLoader: React.FC<FullScreenLoaderProps> = ({ message, progress }) => {
   return (
-    <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-white/95 backdrop-blur-md">
+    <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center bg-white/40 backdrop-blur-xl">
       <div className="relative mb-12">
         {/* Pulsing Outer Rings */}
         <motion.div
