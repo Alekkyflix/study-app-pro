@@ -44,8 +44,10 @@ function App() {
         <SettingsProvider>
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
-              {/* Splash & Onboarding are special logic routes */}
-              <Route path="/splash" element={<Splash />} />
+              {/* Splash is now the entry point for everyone */}
+              <Route path="/" element={<Splash />} />
+              
+              {/* Other special auth routes */}
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/consent" element={<Consent />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -60,7 +62,7 @@ function App() {
               {/* Protected App Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route element={<MainLayout />}>
-                  <Route path="/" element={<Home />} />
+                  <Route path="/dashboard" element={<Home />} />
                   <Route path="/library" element={<Library />} />
                   <Route path="/chat" element={<Chat />} />
                   <Route path="/reports" element={<Reports />} />
@@ -69,8 +71,8 @@ function App() {
                 </Route>
               </Route>
 
-              {/* Fallback */}
-              <Route path="*" element={<Splash />} />
+              {/* Fallback to root (Splash) */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
         </SettingsProvider>

@@ -32,7 +32,7 @@ export function Login() {
       });
 
       if (error) throw error;
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       if (err.message.includes('Email not confirmed')) {
         setError("Please verify your email before logging in");
