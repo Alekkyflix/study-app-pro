@@ -124,6 +124,7 @@ export function SignUp() {
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium text-sm"
             >
               <option value="">Select your university</option>
+              <option value="Meru University">Meru University</option>
               <option value="University of Nairobi">University of Nairobi</option>
               <option value="Kenyatta University">Kenyatta University</option>
               <option value="Strathmore University">Strathmore University</option>
@@ -133,7 +134,7 @@ export function SignUp() {
             </select>
 
             {/* Manual Entry Field */}
-            {(!institution || !["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution)) && (
+            {(!institution || !["Meru University","University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution)) && (
               <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-300">
                 <input 
                   type="text" 
