@@ -30,7 +30,7 @@ export function Splash() {
         // jarring double-navigation. We short-circuit it here instead.
         navigate('/consent');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     }, 2000);
 
