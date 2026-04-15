@@ -24,9 +24,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Build allowed origins from env — no wildcard in production
-_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-_allowed_origins = list({_frontend_url, "http://localhost:5173", "http://localhost:3000"})
+# Build allowed origins — always include known deployment origins
+_frontend_url = os.getenv("FRONTEND_URL", "")
+_allowed_origins = list(filter(None, {
+    _frontend_url,
+    "https://study-app-pro.vercel.app",   # production Vercel
+    "http://localhost:5173",               # local Vite dev
+    "http://localhost:3000",               # local alternative
+}))
 
 app.add_middleware(
     CORSMiddleware,

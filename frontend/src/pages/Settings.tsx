@@ -45,11 +45,32 @@ export function Settings() {
   const handleDeleteAccount = () => {
     showModal({
       title: "Delete your account?",
-      body: "This will permanently delete all your lectures, transcripts and summaries. This cannot be undone.",
-      confirmText: "Delete Permanently",
+      body: "Your account and all data (lectures, transcripts, summaries) will be scheduled for permanent deletion. You have 21 days to cancel by logging back in and contacting support. After 21 days, deletion is irreversible.",
+      confirmText: "Schedule Deletion",
       confirmStyle: "destructive",
-      onConfirm: () => {
-        showError("Action Restricted", "Contact support@studypro.app to delete your account.");
+      onConfirm: async () => {
+        try {
+          // Mark the account as scheduled for deletion in Supabase
+          const { supabase: sb } = await import('../lib/supabase');
+          await sb.from('profiles').update({
+            deletion_scheduled_at: new Date().toISOString(),
+          } as any).eq('id', user?.id ?? '');
+
+          // Sign out and clear local state
+          localStorage.clear();
+          await signOut();
+
+          // After sign-out, AuthContext will navigate to /login automatically
+          showSuccess(
+            'Deletion Scheduled',
+            'Your account is queued for deletion in 21 days. Log in within 21 days to cancel.'
+          );
+        } catch {
+          showError(
+            'Failed',
+            'Could not schedule deletion. Please email support@studypro.app.'
+          );
+        }
       }
     });
   };

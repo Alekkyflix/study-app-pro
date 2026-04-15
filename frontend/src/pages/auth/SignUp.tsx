@@ -12,11 +12,12 @@ export function SignUp() {
   const [institution, setInstitution] = useState('');
   const [termsConsent, setTermsConsent] = useState(false);
   const [recordingConsent, setRecordingConsent] = useState(false);
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [verifyEmailSent, setVerifyEmailSent] = useState(false);
+
   const navigate = useNavigate();
 
   const handleSignUp = async () => {
@@ -54,13 +55,22 @@ export function SignUp() {
           throw error;
         }
       } else {
-        navigate('/');
+        // If Supabase requires email confirmation, the user session is null
+        // and they must verify before they can log in.
+        if (data.session) {
+          // Email confirmation is disabled — user is logged in immediately.
+          // Send them to consent (they're authenticated but haven't consented yet).
+          navigate('/consent');
+        } else {
+          // Email confirmation is ON — show "check your inbox" screen.
+          setVerifyEmailSent(true);
+        }
       }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes('rate limit')) {
-         setError("You've tried to sign up too many times recently. Supabase limits verification emails to prevent spam. Please wait an hour or adjust your Auth settings in the Supabase Dashboard.");
+        setError("Too many sign-up attempts. Please wait an hour before trying again.");
       } else {
-         setError(err.message || "Failed to create account");
+        setError(err.message || "Failed to create account");
       }
     } finally {
       setLoading(false);
@@ -70,6 +80,32 @@ export function SignUp() {
   const handleOAuth = async (provider: 'google' | 'github') => {
     await supabase.auth.signInWithOAuth({ provider });
   };
+
+  // Email verification sent — show confirmation screen
+  if (verifyEmailSent) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 text-gray-900">
+        <div className="max-w-md w-full mx-auto bg-white p-10 rounded-3xl border border-gray-100 shadow-2xl shadow-gray-200/50 text-center">
+          <div className="w-20 h-20 bg-gray-900 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-extrabold tracking-tighter mb-3">Check your inbox</h2>
+          <p className="text-gray-500 font-medium mb-2">
+            We sent a verification link to <span className="font-bold text-gray-900">{email}</span>.
+          </p>
+          <p className="text-sm text-gray-400 font-medium mb-8">
+            Click the link in the email to activate your account, then come back and log in.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold tracking-tight hover:bg-black transition-all"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col justify-center p-6 text-gray-900 overflow-y-auto pt-16 pb-16">
