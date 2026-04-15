@@ -29,7 +29,7 @@ export function Splash() {
         // No profile row yet (brand new user) — they need to consent first.
         navigate('/consent');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     }, 2000);
 
