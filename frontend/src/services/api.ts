@@ -58,9 +58,11 @@ async function apiFetch(
 }
 
 export class ApiError extends Error {
+  isQuotaExceeded: boolean;
   constructor(message: string, public status: number) {
     super(message);
     this.name = 'ApiError';
+    this.isQuotaExceeded = status === 429;
   }
 }
 

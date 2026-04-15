@@ -63,51 +63,65 @@ class RAGService:
     ) -> dict:
         """
         Answer a question based on lecture context
-        
+
         Args:
             question: User question
             context_text: Full lecture transcript or summary
             chat_history: Previous messages for context
-            
+
         Returns:
             dict with answer and metadata
         """
+        if not self.initialized:
+            return {
+                "success": False,
+                "quota_exceeded": False,
+                "error": "AI service is not configured. Please set GEMINI_API_KEY.",
+                "answer": None,
+            }
         try:
             from app.prompts import STUDY_PRO_SYSTEM_MESSAGE
             model = genai.GenerativeModel(
                 model_name="gemini-2.0-flash",
-                system_instruction=STUDY_PRO_SYSTEM_MESSAGE
+                system_instruction=STUDY_PRO_SYSTEM_MESSAGE,
             )
 
-            # Build context message
-            system_message = f"""You are a helpful study assistant. Answer questions based on the following lecture material.
-Be accurate and cite specific parts of the lecture when relevant.
-
-LECTURE MATERIAL:
-{context_text[:100_000]}
-
-Based on this material, provide a clear and educational answer."""
-
-            # Add chat history if available
+            # Build chat history
             messages = []
             if chat_history:
-                for msg in chat_history[-5:]:  # Last 5 messages for context
+                for msg in chat_history[-5:]:
                     messages.append({"role": msg["role"], "parts": [msg["text"]]})
 
-            # Add current question
-            messages.append({"role": "user", "parts": [question]})
+            # Inject transcript as context in the final user turn
+            context_prompt = (
+                f"Lecture material for context:\n{context_text[:100_000]}\n\n"
+                f"Question: {question}"
+            )
+            messages.append({"role": "user", "parts": [context_prompt]})
 
             response = model.generate_content(messages)
 
             return {
                 "success": True,
+                "quota_exceeded": False,
                 "answer": response.text,
                 "question": question,
             }
+
         except Exception as e:
+            err_str = str(e)
+            # Detect quota / rate-limit errors from Google API
+            is_quota = any(k in err_str.lower() for k in (
+                "resource_exhausted", "quota", "rate limit", "429",
+            ))
             return {
                 "success": False,
-                "error": str(e),
+                "quota_exceeded": is_quota,
+                "error": (
+                    "You have reached the Gemini API quota limit. Please wait a moment and try again."
+                    if is_quota
+                    else err_str
+                ),
                 "answer": None,
             }
 

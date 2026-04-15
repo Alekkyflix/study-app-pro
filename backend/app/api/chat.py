@@ -88,7 +88,12 @@ async def send_message(
         )
 
         if not result.get("success"):
-            raise HTTPException(status_code=500, detail="AI could not generate a response")
+            if result.get("quota_exceeded"):
+                raise HTTPException(
+                    status_code=429,
+                    detail="Gemini API quota exceeded. Please wait a moment and try again.",
+                )
+            raise HTTPException(status_code=500, detail=result.get("error", "AI could not generate a response"))
 
         import uuid as _uuid
         now = datetime.utcnow()

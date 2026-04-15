@@ -9,8 +9,7 @@ load_dotenv()
 # Use SQLite for local development if PostgreSQL is not available
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    # Default to local SQLite database
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../", "study_pro.db")
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../", "studypro.db")
     DATABASE_URL = f"sqlite:///{db_path}"
     print(f"📁 Using local SQLite database: {db_path}")
 

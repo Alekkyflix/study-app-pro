@@ -13,9 +13,7 @@ export function Splash() {
   const { profile, loading: settingsLoading } = useSettings();
 
   useEffect(() => {
-    // FIX 2: Block navigation until BOTH auth AND settings have resolved.
-    // Previously only authLoading was checked, so the profile (and therefore
-    // the consent flag) could still be mid-fetch when the timer fired.
+    // Block navigation until BOTH auth AND settings have resolved.
     if (authLoading || settingsLoading) return;
 
     const timer = setTimeout(() => {
@@ -23,11 +21,12 @@ export function Splash() {
         navigate('/login');
       } else if (requireOnboarding) {
         navigate('/onboarding');
-      } else if (!profile?.recording_consent) {
-        // FIX 3: Check consent here, same logic as ProtectedRoute.
-        // If we don't, an un-consented user gets sent to '/' and then
-        // ProtectedRoute immediately redirects them to '/consent' — a
-        // jarring double-navigation. We short-circuit it here instead.
+      } else if (profile !== null && !profile.recording_consent) {
+        // Only redirect to consent if profile is LOADED and explicitly has no consent.
+        // If profile is null (Supabase fetch returned nothing), treat it as needing consent.
+        navigate('/consent');
+      } else if (profile === null) {
+        // No profile row yet (brand new user) — they need to consent first.
         navigate('/consent');
       } else {
         navigate('/');
