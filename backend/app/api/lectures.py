@@ -62,7 +62,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_AUDIO_TYPES = {"audio/wav", "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4"}
 ALLOWED_DOC_TYPES   = {"application/pdf", "text/plain"}
-MAX_UPLOAD_BYTES    = 100 * 1024 * 1024  # 100 MB
+MAX_UPLOAD_BYTES    = 50 * 1024 * 1024   # 50 MB — must match Supabase Storage bucket limit
 
 # ---------------------------------------------------------------------------
 # Supabase Storage helpers (2.1 — durable file storage)
