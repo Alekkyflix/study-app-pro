@@ -10,12 +10,17 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database.db import SessionLocal
 from app.models.database import Lecture
 from app.security import get_user_id
+
+# Re-use the limiter singleton created in main.py
+limiter = Limiter(key_func=get_remote_address)
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +183,9 @@ async def get_lecture(lecture_id: str, user_id: str = Depends(get_user_id)):
 
 
 @router.post("/lectures/{lecture_id}/upload-audio", response_model=dict)
+@limiter.limit("20/minute")
 async def upload_audio(
+    request: Request,
     lecture_id: str,
     file: UploadFile = File(...),
     user_id: str = Depends(get_user_id),
@@ -210,7 +217,9 @@ async def upload_audio(
 
 
 @router.post("/lectures/{lecture_id}/upload-document", response_model=dict)
+@limiter.limit("20/minute")
 async def upload_document(
+    request: Request,
     lecture_id: str,
     file: UploadFile = File(...),
     user_id: str = Depends(get_user_id),
@@ -256,7 +265,8 @@ async def upload_document(
 
 
 @router.post("/lectures/{lecture_id}/transcribe", response_model=dict)
-async def transcribe_lecture(lecture_id: str, user_id: str = Depends(get_user_id)):
+@limiter.limit("5/minute")
+async def transcribe_lecture(request: Request, lecture_id: str, user_id: str = Depends(get_user_id)):
     try:
         with get_db() as db:
             _get_lecture_or_404(db, lecture_id, user_id)
@@ -293,7 +303,9 @@ async def transcribe_lecture(lecture_id: str, user_id: str = Depends(get_user_id
 
 
 @router.post("/lectures/{lecture_id}/summarize", response_model=dict)
+@limiter.limit("10/minute")
 async def summarize_lecture(
+    request: Request,
     lecture_id: str,
     summary_type: str = "executive",
     user_id: str = Depends(get_user_id),
@@ -331,7 +343,9 @@ async def summarize_lecture(
 
 
 @router.post("/lectures/{lecture_id}/chat", response_model=dict)
+@limiter.limit("15/minute")
 async def chat_lecture(
+    request: Request,
     lecture_id: str,
     chat_query: ChatQuery,
     user_id: str = Depends(get_user_id),

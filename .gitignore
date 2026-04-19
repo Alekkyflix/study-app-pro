@@ -82,6 +82,7 @@ recordings/
 uploads/
 temp/
 tmp/
+system_audit.md
 *.db
 *.sqlite
 *.sqlite3

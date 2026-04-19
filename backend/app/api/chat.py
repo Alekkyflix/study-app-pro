@@ -3,11 +3,14 @@ Chat API — conversational RAG over lecture transcripts.
 All routes require a valid Supabase JWT.
 """
 import logging
+import uuid
 from contextlib import contextmanager
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database.db import SessionLocal
 from app.models.database import ChatMessage, ChatSession, Lecture
@@ -16,6 +19,7 @@ from app.services.rag_service import get_rag_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @contextmanager
@@ -42,7 +46,9 @@ def _get_lecture_or_404(db, lecture_id: str, user_id: str) -> Lecture:
 
 
 @router.post("/lectures/{lecture_id}/chat/session", response_model=dict)
+@limiter.limit("15/minute")
 async def send_message(
+    request: Request,
     lecture_id: str,
     message_create: ChatMessageCreate,
     user_id: str = Depends(get_user_id),
@@ -124,7 +130,9 @@ async def send_message(
 
 
 @router.get("/lectures/{lecture_id}/chat/history", response_model=dict)
+@limiter.limit("30/minute")
 async def get_chat_history(
+    request: Request,
     lecture_id: str,
     user_id: str = Depends(get_user_id),
 ):
@@ -165,7 +173,9 @@ async def get_chat_history(
 
 
 @router.delete("/lectures/{lecture_id}/chat/history", response_model=dict)
+@limiter.limit("10/minute")
 async def clear_chat_history(
+    request: Request,
     lecture_id: str,
     user_id: str = Depends(get_user_id),
 ):

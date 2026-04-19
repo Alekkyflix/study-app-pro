@@ -10,3 +10,9 @@ services:
         value: sqlite:///./studypro.db
       - key: GEMINI_API_KEY
         sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: FRONTEND_URL
+        value: https://study-app-pro.vercel.app
