@@ -6,12 +6,21 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # ── Provided automatically by Render's managed PostgreSQL add-on ──────
+      # In your Render dashboard: "New +" → "PostgreSQL" → link it here.
+      # DO NOT set this to a SQLite path; it will be wiped on every deploy.
       - key: DATABASE_URL
-        value: sqlite:///./studypro.db
+        sync: false
+      # ── Secrets: set values manually in the Render dashboard ─────────────
       - key: GEMINI_API_KEY
         sync: false
       - key: SUPABASE_JWT_SECRET
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # ── Static config ─────────────────────────────────────────────────────
       - key: ENVIRONMENT
         value: production
       - key: FRONTEND_URL
