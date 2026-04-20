@@ -13,7 +13,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.api import lectures, chat
+from app.api import analytics, chat, documents, lectures, reports, summarization
 from app.database.db import init_db
 
 # ---------------------------------------------------------------------------
@@ -114,6 +114,10 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 app.include_router(lectures.router)
 app.include_router(chat.router)
+app.include_router(analytics.router)
+app.include_router(reports.router)
+app.include_router(summarization.router)
+app.include_router(documents.router)
 
 
 # ---------------------------------------------------------------------------
