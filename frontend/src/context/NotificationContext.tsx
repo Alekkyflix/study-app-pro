@@ -39,7 +39,7 @@ interface NotificationContextType {
   showModal: (options: ModalOptions) => void;
   showMiniToast: (message: string) => void;
   setLoading: (isLoading: boolean, message?: string, progress?: number) => void;
-  showConsent: (onConfirm: () => void) => void;
+  showConsent: (onConfirm: () => void, mode?: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -99,9 +99,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     setLoadingState({ isLoading, message, progress });
   }, []);
 
-  const showConsent = useCallback((onConfirm: () => void) => {
+  const showConsent = useCallback((onConfirm: () => void, mode = 'always') => {
+    if (mode === 'never') {
+      onConfirm();
+      return;
+    }
     const consentCount = parseInt(localStorage.getItem('studypro_consent_count') || '0');
-    if (consentCount < 3) {
+    if (mode === 'always' || (mode === '3_times' && consentCount < 3)) {
       setOnConsentConfirm(() => onConfirm);
       setConsentVisible(true);
     } else {

@@ -115,7 +115,7 @@ export function Home() {
         console.error("Error accessing microphone:", error);
         showError("Microphone Access Failed", "Unable to access microphone. Please check permissions.");
       }
-    });
+    }, settings.consentReminder);
   };
 
   const handleStop = () => {
