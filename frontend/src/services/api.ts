@@ -103,8 +103,8 @@ export class ApiClient {
     });
   }
 
-  transcribeLecture(lectureId: string) {
-    return apiFetch(`/api/lectures/${lectureId}/transcribe`, { method: 'POST' });
+  transcribeLecture(lectureId: string, model: string = 'balanced') {
+    return apiFetch(`/api/lectures/${lectureId}/transcribe?model=${model}`, { method: 'POST' });
   }
 
   summarizeLecture(lectureId: string, summaryType = 'executive') {

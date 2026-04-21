@@ -22,38 +22,74 @@ export function Reports() {
   const [chatReport, setChatReport] = useState<{id: string, title: string} | null>(null);
   const { showError, showSuccess } = useNotification();
 
-  useEffect(() => {
-    async function fetchReports() {
-      try {
-        const res = await apiClient.getLectures();
-        if (res.success) {
-          const generatedReports = res.lectures
-            .filter((l: any) => l.has_summary || l.has_transcript)
-            .map((l: any) => ({
-              id: l.id,
-              title: `${l.title} Report`,
-              type: l.has_summary ? "summary" : "analysis",
-              date: new Date(l.created_at).toLocaleDateString(),
-              status: "ready",
-            }));
-          setReports(generatedReports);
-        }
-      } catch (error) {
-        console.error("Error fetching reports:", error);
-      } finally {
-        setLoading(false);
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.getLectures();
+      if (res.success) {
+        const generatedReports = res.lectures
+          .filter((l: any) => l.has_summary || l.has_transcript)
+          .map((l: any) => ({
+            id: l.id,
+            // The replace cleans up the UI since we append "Report" inside the card if we want
+            title: l.title,
+            type: l.has_summary ? "summary" : "analysis",
+            date: new Date(l.created_at).toLocaleDateString(),
+            status: "ready",
+          }));
+        setReports(generatedReports);
       }
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     fetchReports();
   }, []);
+
+  const [selectorOpen, setSelectorOpen] = useState<{type: string, label: string} | null>(null);
+
+  const handleGenerateReport = async (lectureId: string, summaryType: string) => {
+    setSelectorOpen(null);
+    setLoading(true);
+    try {
+      const res = await apiClient.summarizeLecture(lectureId, summaryType);
+      if (res.success) {
+        showSuccess("Report Generated", "Your new report is ready.");
+        await fetchReports();
+      } else {
+        showError("Generation Failed", res.error || "Could not generate report.");
+      }
+    } catch (error) {
+      showError("Generation Error", "Something went wrong while generating the report.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDownload = async (reportId: string, title: string) => {
     setDownloadingId(reportId);
     try {
       const res = await apiClient.getLecture(reportId);
       if (res.success && res.lecture) {
-        const textContent = `REPORT: ${title}\n\n=== SUMMARY ===\n${res.lecture.summary || "No summary"}\n\n=== TRANSCRIPT ===\n${res.lecture.transcript || "No transcript"}`;
+        let summaryText = res.lecture.summary || "No summary";
+        
+        // Handle case where summary is structured JSON from the backend
+        try {
+          const parsed = JSON.parse(summaryText);
+          if (typeof parsed === 'object' && parsed !== null) {
+            summaryText = Object.entries(parsed)
+              .map(([k, v]) => `=== ${k.toUpperCase()} ===\n${v}`)
+              .join('\n\n');
+          }
+        } catch (e) {
+          // It's a plain string, which is fine
+        }
+
+        const textContent = `REPORT: ${title}\n\n=== SUMMARY ===\n${summaryText}\n\n=== TRANSCRIPT ===\n${res.lecture.transcript || "No transcript"}`;
         const blob = new Blob([textContent], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -99,13 +135,13 @@ export function Reports() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {[
-            { icon: FileText, label: "Executive Summary", desc: "Brief overview" },
-            { icon: TrendingUp, label: "Analysis Report", desc: "Detailed insights" },
-            { icon: Calendar, label: "Exam Questions", desc: "Practice questions" },
+            { type: "executive", icon: FileText, label: "Executive Summary", desc: "Brief overview" },
+            { type: "detailed", icon: TrendingUp, label: "Analysis Report", desc: "Detailed insights" },
+            { type: "questions", icon: Calendar, label: "Exam Questions", desc: "Practice questions" },
           ].map((action, i) => (
             <button
               key={i}
-              onClick={() => navigate("/dashboard")}
+              onClick={() => setSelectorOpen({ type: action.type, label: action.label })}
               className="glass-card rounded-3xl p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] text-left premium-shadow border border-gray-100"
             >
               <action.icon className="w-8 h-8 text-gray-900 mb-4" />
@@ -192,6 +228,39 @@ export function Reports() {
           transcript=""
           onClose={() => setChatReport(null)}
         />
+      )}
+
+      {/* Report Type Selector Modal */}
+      {selectorOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md premium-shadow">
+            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-2">Generate {selectorOpen.label}</h3>
+            <p className="text-sm font-medium text-gray-500 mb-6">Select a transcribed lecture to generate this report for:</p>
+            <div className="max-h-[60vh] overflow-y-auto space-y-2 mb-6">
+              {reports.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => handleGenerateReport(r.id, selectorOpen.type)}
+                  className="w-full text-left p-4 hover:bg-gray-50 border border-gray-100 rounded-2xl transition"
+                >
+                  <div className="font-semibold text-gray-900 tracking-tight">{r.title}</div>
+                  <div className="text-xs text-gray-400 mt-1">{r.date}</div>
+                </button>
+              ))}
+              {reports.length === 0 && (
+                <div className="text-center text-sm text-gray-400 p-4">
+                  No transcribed lectures available. Please record a lecture first.
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setSelectorOpen(null)}
+              className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

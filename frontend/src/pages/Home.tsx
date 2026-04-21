@@ -7,6 +7,7 @@ import { ChatPanel } from "../components/ChatPanel";
 import { ReportPanel } from "../components/ReportPanel";
 import { apiClient } from "../services/api";
 import { useNotification } from "../context/NotificationContext";
+import { useSettings } from "../context/SettingsContext";
 import { EmptyState, InlineLoader, RecordingIndicator, OnboardingTooltip } from "../components/notifications";
 
 export function Home() {
@@ -16,6 +17,7 @@ export function Home() {
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const { showSuccess, showError, showWarning, showInfo, showConsent, setLoading: setGlobalLoading } = useNotification();
+  const { settings } = useSettings();
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,14 @@ export function Home() {
     setShowTooltip(false);
     localStorage.setItem("studypro_tutorial_done", "true");
   };
+
+  // Implement auto-stop using settings
+  useEffect(() => {
+    if (isRecording && settings.autoStop && duration >= settings.autoStopDuration * 60) {
+      showInfo("Auto-Stopped", `Recording reached the ${settings.autoStopDuration} minute limit.`);
+      handleStop();
+    }
+  }, [duration, isRecording, settings.autoStop, settings.autoStopDuration]);
   
   // State for managing lecture after saving
   const [currentLectureId, setCurrentLectureId] = useState<string | null>(null);
@@ -173,6 +183,11 @@ export function Home() {
       setStatus("✅ Lecture saved! Ready for transcription.");
       setDuration(0);
       setAudioBlob(null);
+
+      // Auto transcribe if enabled
+      if (settings.autoTranscribe) {
+        await handleTranscribe(lectureId);
+      }
     } catch (error) {
       console.error("Error saving lecture:", error);
       setStatus(`❌ ${error instanceof Error ? error.message : "Failed to save"}`);
@@ -209,13 +224,21 @@ export function Home() {
         if (!uploadRes.success) throw new Error(uploadRes.error || "Failed to parse document");
         showSuccess("Document Uploaded", "Document parsed successfully!");
         setStatus("✅ Document parsed! Ready for summarization.");
-        setTranscript(titleToUse + " document parsed via PDF/TXT parser successfully.");
+        const parsedText = titleToUse + " document parsed via PDF/TXT parser successfully.";
+        setTranscript(parsedText);
+        if (settings.autoSummarize) {
+          await handleSummarize(lectureId, parsedText);
+        }
       } else {
         setStatus("Uploading audio...");
         const uploadRes = await apiClient.uploadAudio(lectureId, file);
         if (!uploadRes.success) throw new Error(uploadRes.error || "Failed to upload audio");
         showSuccess("Audio Uploaded", "Audio uploaded successfully!");
         setStatus("✅ Audio uploaded! Ready for transcription.");
+        
+        if (settings.autoTranscribe) {
+          await handleTranscribe(lectureId);
+        }
       }
       
     } catch (error) {
@@ -229,8 +252,10 @@ export function Home() {
     }
   };
 
-  const handleTranscribe = async () => {
-    if (!currentLectureId) {
+  const handleTranscribe = async (idToTranscribe?: string | React.MouseEvent) => {
+    const targetId = typeof idToTranscribe === 'string' ? idToTranscribe : currentLectureId;
+    
+    if (!targetId) {
       showWarning("Save Required", "Please save a lecture first");
       return;
     }
@@ -239,7 +264,7 @@ export function Home() {
       setLoading(true);
       setStatus("🎤 Transcribing audio...");
 
-      const result = await apiClient.transcribeLecture(currentLectureId);
+      const result = await apiClient.transcribeLecture(targetId, settings.transcriptionModel);
       if (!result.success) {
         throw new Error(result.error || "Transcription failed");
       }
@@ -247,6 +272,10 @@ export function Home() {
       setTranscript(result.transcript || "");
       showSuccess("Transcription Complete", "Your lecture is ready to review");
       setStatus("✅ Transcription complete!");
+
+      if (settings.autoSummarize) {
+        await handleSummarize(targetId, result.transcript);
+      }
     } catch (error) {
       console.error("Error transcribing:", error);
       showError("Transcription Failed", error instanceof Error ? error.message : "Could not process audio");
@@ -256,13 +285,16 @@ export function Home() {
     }
   };
 
-  const handleSummarize = async () => {
-    if (!currentLectureId) {
+  const handleSummarize = async (idToSummarize?: string | React.MouseEvent, currentTranscript?: string) => {
+    const targetId = typeof idToSummarize === 'string' ? idToSummarize : currentLectureId;
+    const targetTranscript = typeof currentTranscript === 'string' ? currentTranscript : transcript;
+
+    if (!targetId) {
       showWarning("Save Required", "Please save a lecture first");
       return;
     }
 
-    if (!transcript) {
+    if (!targetTranscript) {
       showWarning("Transcript Required", "Please transcribe the lecture first");
       return;
     }
@@ -271,7 +303,7 @@ export function Home() {
       setLoading(true);
       setStatus("📝 Generating summary...");
 
-      const result = await apiClient.summarizeLecture(currentLectureId);
+      const result = await apiClient.summarizeLecture(targetId, settings.summaryType);
       if (!result.success) {
         throw new Error(result.error || "Summarization failed");
       }
