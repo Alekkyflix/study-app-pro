@@ -75,6 +75,54 @@ export function Settings() {
     });
   };
 
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    try {
+      const { supabase: sb } = await import('../lib/supabase');
+      const { error } = await sb.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      showSuccess("Link Sent", "Check your inbox for a password reset link.");
+    } catch {
+      showError("Failed", "Could not send password reset email.");
+    }
+  };
+
+  const handleExportData = async () => {
+    showInfo('Export Started', 'Compiling your data archive...');
+    try {
+      const { apiClient } = await import('../services/api');
+      const res = await apiClient.getLectures();
+      if (!res.success) throw new Error("Could not fetch lectures");
+      
+      const fullData = await Promise.all((res.lectures || []).map(async (l: any) => {
+         const detail = await apiClient.getLecture(l.id);
+         return detail.lecture;
+      }));
+      
+      const exportObject = {
+         profile,
+         settings,
+         lectures: fullData
+      };
+      
+      const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `studypro_data_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showSuccess('Export Complete', 'Your data archive has been downloaded.');
+    } catch {
+      showError('Export Failed', 'Could not compile your data archive.');
+    }
+  };
+
   const accentColors: { name: AccentColor; hex: string }[] = [
     { name: 'blue', hex: '#3b82f6' },
     { name: 'green', hex: '#10b981' },
@@ -118,7 +166,7 @@ export function Settings() {
           <SettingRow
             icon={Key}
             label="Change Password"
-            onClick={() => showInfo('Password Reset', 'Redirecting to secure password reset flow...')}
+            onClick={handleChangePassword}
           />
           <SettingRow
             icon={ShieldCheck}
@@ -346,7 +394,7 @@ export function Settings() {
           <SettingRow
             icon={Trash2}
             label="Export All My Data"
-            onClick={() => showInfo('Export', 'Preparing your data archive...')}
+            onClick={handleExportData}
           />
           <SettingRow
             icon={Trash2}
@@ -362,7 +410,7 @@ export function Settings() {
           <SettingRow
             icon={MessageSquare}
             label="Join Community (WhatsApp)"
-            onClick={() => window.open('https://whatsapp.com', '_blank')}
+            onClick={() => window.open('https://chat.whatsapp.com/invite-placeholder', '_blank')}
           />
           <SettingRow icon={HelpCircle} label="Built with ❤️ in Kenya 🇰🇪" disabled />
         </SettingSection>
