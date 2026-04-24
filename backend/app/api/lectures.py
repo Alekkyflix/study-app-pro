@@ -353,7 +353,12 @@ async def upload_document(
 
 @router.post("/lectures/{lecture_id}/transcribe", response_model=dict)
 @limiter.limit("5/minute")
-async def transcribe_lecture(request: Request, lecture_id: str, user_id: str = Depends(get_user_id)):
+async def transcribe_lecture(
+    request: Request,
+    lecture_id: str,
+    model: str = "balanced",   # fast | balanced | accurate — maps to Whisper model sizes
+    user_id: str = Depends(get_user_id),
+):
     try:
         with get_db() as db:
             lecture = _get_lecture_or_404(db, lecture_id, user_id)
@@ -381,7 +386,18 @@ async def transcribe_lecture(request: Request, lecture_id: str, user_id: str = D
             local_path = os.path.join(UPLOAD_DIR, matching[-1])
 
         # --- FIX 2.3: run Whisper in a thread — it is CPU-bound and blocks for minutes ---
-        result = await run_in_threadpool(_get_transcription_service().transcribe, local_path)
+        # Map the settings model preference to a Whisper model size string
+        _model_map = {"fast": "tiny", "balanced": "base", "accurate": "medium"}
+        _whisper_size = _model_map.get(model, "base")
+
+        def _transcription_service_for_model():
+            try:
+                from app.services.transcription_service import TranscriptionService
+                return TranscriptionService(model_size=_whisper_size)
+            except ImportError:
+                return _get_transcription_service()
+
+        result = await run_in_threadpool(_transcription_service_for_model().transcribe, local_path)
 
         # --- FIX 2.4: delete temp file immediately after transcription ---
         if tmp_path_to_clean:
