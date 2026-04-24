@@ -60,14 +60,16 @@ async def send_message(
             if not lecture.transcript:
                 raise HTTPException(status_code=400, detail="No transcript available for this lecture")
 
-            # Get or create a chat session for this lecture
+            # Get or create a chat session scoped to this user+lecture
             session = db.query(ChatSession).filter(
-                ChatSession.lecture_id == lecture_id
+                ChatSession.lecture_id == lecture_id,
+                ChatSession.user_id == user_id,
             ).first()
             if not session:
                 session = ChatSession(
-                    id=str(__import__("uuid").uuid4()),
+                    id=str(uuid.uuid4()),
                     lecture_id=lecture_id,
+                    user_id=user_id,
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
                 )
@@ -101,18 +103,18 @@ async def send_message(
                 )
             raise HTTPException(status_code=500, detail=result.get("error", "AI could not generate a response"))
 
-        import uuid as _uuid
+        import uuid as _uuid  # noqa: F401 (already imported above — kept for clarity)
         now = datetime.utcnow()
         with get_db() as db:
             db.add(ChatMessage(
-                id=str(_uuid.uuid4()),
+                id=str(uuid.uuid4()),
                 session_id=session_id,
                 role="user",
                 content=message_create.message,
                 created_at=now,
             ))
             db.add(ChatMessage(
-                id=str(_uuid.uuid4()),
+                id=str(uuid.uuid4()),
                 session_id=session_id,
                 role="assistant",
                 content=result["answer"],
@@ -142,7 +144,8 @@ async def get_chat_history(
             _get_lecture_or_404(db, lecture_id, user_id)
 
             session = db.query(ChatSession).filter(
-                ChatSession.lecture_id == lecture_id
+                ChatSession.lecture_id == lecture_id,
+                ChatSession.user_id == user_id,
             ).first()
             if not session:
                 return {"success": True, "messages": []}
@@ -185,7 +188,8 @@ async def clear_chat_history(
             _get_lecture_or_404(db, lecture_id, user_id)
 
             session = db.query(ChatSession).filter(
-                ChatSession.lecture_id == lecture_id
+                ChatSession.lecture_id == lecture_id,
+                ChatSession.user_id == user_id,
             ).first()
             if session:
                 db.query(ChatMessage).filter(
