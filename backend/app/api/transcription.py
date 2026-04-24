@@ -1,30 +1,13 @@
 """
-Transcription endpoints
-Handle audio transcription via Whisper or Gemini
+DEPRECATED — DO NOT REGISTER THIS ROUTER.
+
+This file is a dead stub. The real transcription logic lives inside:
+  backend/app/api/lectures.py  -> POST /api/lectures/{lecture_id}/transcribe
+
+This file is kept to avoid breaking any git history references but must NOT
+be added to app.include_router() in main.py — doing so would shadow the real
+route and return empty 200 responses for all transcription calls.
+
+If additional transcription routes are needed in future (e.g. GET transcript,
+status polling), implement them here and register with a distinct prefix.
 """
-from fastapi import APIRouter
-
-router = APIRouter()
-
-@router.post("/lectures/{lecture_id}/transcribe")
-async def transcribe_lecture(lecture_id: str, method: str = "auto"):
-    """
-    Transcribe lecture audio
-    method: 'whisper' (local), 'gemini' (cloud), or 'auto' (choose best)
-    """
-    pass
-
-@router.get("/lectures/{lecture_id}/transcript")
-async def get_transcript(lecture_id: str):
-    """Get transcript for a lecture"""
-    pass
-
-@router.put("/lectures/{lecture_id}/transcript")
-async def update_transcript(lecture_id: str):
-    """Update/edit transcript"""
-    pass
-
-@router.get("/lectures/{lecture_id}/transcription-status")
-async def get_transcription_status(lecture_id: str):
-    """Check transcription progress"""
-    pass
