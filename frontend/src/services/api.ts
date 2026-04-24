@@ -3,6 +3,14 @@ import { supabase } from '../lib/supabase';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const REQUEST_TIMEOUT_MS = 30_000;
 
+// Warn in non-localhost contexts if VITE_API_URL falls back to localhost
+if (!import.meta.env.VITE_API_URL && !import.meta.env.DEV) {
+  console.warn(
+    '[StudyPro] VITE_API_URL is not set. API calls will route to http://localhost:8000, ' +
+    'which will fail on a deployed frontend. Set VITE_API_URL in your Vercel project settings.'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Auth header helper
 // ---------------------------------------------------------------------------
@@ -65,6 +73,19 @@ export class ApiError extends Error {
     this.isQuotaExceeded = status === 429;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Network guard — blocks mobile data uploads if wifiOnly setting is active
+// ---------------------------------------------------------------------------
+export function checkWifiOnly(wifiOnly: boolean): boolean {
+  if (!wifiOnly) return true;
+  const conn = (navigator as any).connection;
+  if (!conn) return true; // Network Information API not available — allow
+  const type: string = conn.type || conn.effectiveType || '';
+  const isCellular = type === 'cellular' || type.startsWith('2g') || type.startsWith('3g');
+  return !isCellular; // returns false if on cellular (blocked)
+}
+
 
 // ---------------------------------------------------------------------------
 // API client
@@ -132,11 +153,12 @@ export class ApiClient {
     });
   }
 
-  generateReport(lectureIds: string[], reportType: string) {
+  generateReport(lectureId: string, reportType: string) {
     return apiFetch('/api/reports/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lecture_ids: lectureIds, report_type: reportType }),
+      // Backend expects singular lecture_id (string), not an array
+      body: JSON.stringify({ lecture_id: lectureId, report_type: reportType }),
     });
   }
 

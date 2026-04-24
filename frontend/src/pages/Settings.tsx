@@ -89,6 +89,29 @@ export function Settings() {
     }
   };
 
+  // Wire studyReminders toggle to Push Notification API
+  const handleStudyRemindersToggle = async (enabled: boolean) => {
+    if (!enabled) {
+      updateSetting('studyReminders', false);
+      return;
+    }
+    if (!('Notification' in window)) {
+      showInfo('Not Supported', 'Push notifications are not supported in your browser.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      updateSetting('studyReminders', true);
+      showSuccess('Reminders Enabled', 'You will receive study reminders via push notification.');
+    } else {
+      showError(
+        'Permission Denied',
+        'Please allow notifications in your browser settings to enable study reminders.',
+      );
+      // Do not flip the toggle on — permission was denied
+    }
+  };
+
   const handleExportData = async () => {
     showInfo('Export Started', 'Compiling your data archive...');
     try {
@@ -323,12 +346,13 @@ export function Settings() {
           <SettingRow
             icon={Monitor}
             label="AI Provider"
+            description="Currently only Google Gemini is active"
             type="select"
             value={settings.aiProvider}
             options={[
               { label: 'Google Gemini', value: 'gemini' },
-              { label: 'OpenAI GPT', value: 'openai' },
-              { label: 'Anthropic Claude', value: 'claude' }
+              { label: 'OpenAI GPT (coming soon)', value: 'openai' },
+              { label: 'Anthropic Claude (coming soon)', value: 'claude' }
             ]}
             onChange={(v) => updateSetting('aiProvider', v)}
           />
@@ -369,7 +393,7 @@ export function Settings() {
             label="Study Reminders"
             type="toggle"
             value={settings.studyReminders}
-            onChange={(v) => updateSetting('studyReminders', v)}
+            onChange={handleStudyRemindersToggle}
           />
         </SettingSection>
 
@@ -410,7 +434,8 @@ export function Settings() {
           <SettingRow
             icon={MessageSquare}
             label="Join Community (WhatsApp)"
-            onClick={() => window.open('https://chat.whatsapp.com/invite-placeholder', '_blank')}
+            description="Group link coming soon"
+            onClick={() => showInfo('Coming Soon', 'Our WhatsApp study group link will be added here soon.')}
           />
           <SettingRow icon={HelpCircle} label="Built with ❤️ in Kenya 🇰🇪" disabled />
         </SettingSection>

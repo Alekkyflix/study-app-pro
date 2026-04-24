@@ -5,7 +5,7 @@ import { RecordingInterface } from "../components/RecordingInterface";
 import { Waveform } from "../components/Waveform";
 import { ChatPanel } from "../components/ChatPanel";
 import { ReportPanel } from "../components/ReportPanel";
-import { apiClient } from "../services/api";
+import { apiClient, checkWifiOnly } from "../services/api";
 import { useNotification } from "../context/NotificationContext";
 import { useSettings } from "../context/SettingsContext";
 import { EmptyState, InlineLoader, RecordingIndicator, OnboardingTooltip } from "../components/notifications";
@@ -56,6 +56,10 @@ export function Home() {
   const timerRef = useRef<number>();
   const audioInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  // Wake Lock sentinel — keeps the screen on during recording
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  // Whether the tab went to background during an active recording
+  const [tabHiddenDuringRecording, setTabHiddenDuringRecording] = useState(false);
 
   // Initialize audio context on first user interaction
   const initAudioContext = async () => {
@@ -64,6 +68,47 @@ export function Home() {
         (window as any).webkitAudioContext)();
     }
   };
+
+  // Acquire screen Wake Lock — prevents mobile from sleeping during recording
+  const acquireWakeLock = async () => {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      } catch {
+        // Wake Lock denied (e.g. low battery mode) — non-fatal, just log
+        console.warn('[StudyPro] Screen Wake Lock could not be acquired.');
+      }
+    }
+  };
+
+  // Release Wake Lock — called when recording stops or component unmounts
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+  };
+
+  // Page Visibility listener — warn user if they switch tabs while recording
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isRecording) {
+        setTabHiddenDuringRecording(true);
+        showWarning(
+          'Recording Active',
+          'Switching tabs on mobile may stop your recording. Keep this tab open.',
+        );
+      }
+      if (!document.hidden) {
+        setTabHiddenDuringRecording(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRecording]);
+
+  // Release wake lock when component unmounts (safety net)
+  useEffect(() => () => releaseWakeLock(), []);
 
   const handleRecord = async () => {
     showConsent(async () => {
@@ -87,8 +132,16 @@ export function Home() {
         source.connect(analyser);
         analyserRef.current = analyser;
 
+        // --- Wire audioQuality setting to MediaRecorder bitrate ---
+        const bitrateMap: Record<string, number> = {
+          low: 32_000,
+          standard: 64_000,
+          high: 128_000,
+        };
+        const audioBitsPerSecond = bitrateMap[settings.audioQuality] ?? 64_000;
+
         // Setup media recorder
-        const mediaRecorder = new MediaRecorder(stream);
+        const mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond });
         const chunks: BlobPart[] = [];
 
         mediaRecorder.ondataavailable = (event) => {
@@ -103,6 +156,9 @@ export function Home() {
 
         mediaRecorder.start();
         mediaRecorderRef.current = mediaRecorder;
+
+        // Acquire Wake Lock so the screen stays on during recording
+        await acquireWakeLock();
 
         setIsRecording(true);
         setDuration(0);
@@ -131,6 +187,9 @@ export function Home() {
       clearInterval(timerRef.current);
     }
 
+    // Release Wake Lock when recording ends
+    releaseWakeLock();
+    setTabHiddenDuringRecording(false);
     setIsRecording(false);
   };
 
@@ -159,6 +218,12 @@ export function Home() {
     }
 
     try {
+      // --- WiFi-only guard ---
+      if (!checkWifiOnly(settings.wifiOnly)) {
+        showWarning('WiFi Only', 'You are on mobile data. Disable "WiFi Only" in Settings to upload on cellular.');
+        return;
+      }
+
       setLoading(true);
       setGlobalLoading(true, "Saving your lecture...");
       setStatus("Creating lecture...");
