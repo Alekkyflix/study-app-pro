@@ -162,6 +162,10 @@ export class ApiClient {
     });
   }
 
+  getAudioDownloadUrl(lectureId: string) {
+    return apiFetch(`/api/lectures/${lectureId}/download-audio`);
+  }
+
   deleteLecture(id: string) {
     return apiFetch(`/api/lectures/${id}`, { method: 'DELETE' });
   }

@@ -1,4 +1,4 @@
-import { Search, Download, Trash2, Clock, BookOpen, FileText, Mic, MessageSquare } from "lucide-react";
+import { Search, Download, Trash2, Clock, BookOpen, FileText, Mic, MessageSquare, Headphones } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiClient } from "../services/api";
 import { ChatPanel } from "../components/ChatPanel";
@@ -10,6 +10,7 @@ interface Lecture {
   title: string;
   created_at: string;
   duration: number;
+  audio_url?: string;
 }
 
 export function Library() {
@@ -21,7 +22,8 @@ export function Library() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const { showModal, showSuccess, showError } = useNotification();
+  const [isDownloadingAudio, setIsDownloadingAudio] = useState(false);
+  const { showModal, showSuccess, showError, showInfo } = useNotification();
 
   useEffect(() => {
     async function loadLectures() {
@@ -107,17 +109,55 @@ export function Library() {
     }
   };
 
-  const handleDownloadText = (title: string, summary: string, transcript: string) => {
-    const textContent = `Title: ${title}\n\n=== SUMMARY ===\n${summary || "No summary"}\n\n=== TRANSCRIPT ===\n${transcript || "No transcript"}`;
-    const blob = new Blob([textContent], { type: "text/plain" });
+  const handleDownloadTranscript = (title: string, summary: string, transcript: string) => {
+    if (!transcript && !summary) {
+      showInfo("Nothing to Download", "This lecture has no transcript or summary yet.");
+      return;
+    }
+    const textContent = [
+      `STUDYPRO EXPORT`,
+      `${'='.repeat(50)}`,
+      `Title: ${title}`,
+      `Exported: ${new Date().toLocaleString()}`,
+      `${'='.repeat(50)}`,
+      '',
+      summary ? `SUMMARY\n${'-'.repeat(40)}\n${summary}` : '',
+      '',
+      transcript ? `FULL TRANSCRIPT\n${'-'.repeat(40)}\n${transcript}` : '',
+    ].filter(Boolean).join('\n');
+    const blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${title.replace(/\s+/g, "_")}_Details.txt`;
+    a.download = `${title.replace(/[^a-z0-9]/gi, "_")}_transcript.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadAudio = async (lectureId: string, title: string) => {
+    setIsDownloadingAudio(true);
+    try {
+      const res = await apiClient.getAudioDownloadUrl(lectureId);
+      if (!res?.success || !res?.url) {
+        showError("No Audio", "No audio file found for this lecture.");
+        return;
+      }
+      // Trigger browser download using a temporary anchor
+      const a = document.createElement("a");
+      a.href = res.url;
+      a.download = `${title.replace(/[^a-z0-9]/gi, "_")}_audio.webm`;
+      a.target = "_blank"; // fallback for cross-origin signed URLs
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showSuccess("Download Started", "Your audio file is downloading.");
+    } catch {
+      showError("Download Failed", "Could not retrieve the audio file.");
+    } finally {
+      setIsDownloadingAudio(false);
+    }
   };
 
   const filtered = lectures.filter((l) =>
@@ -233,10 +273,22 @@ export function Library() {
                         <MessageSquare className="w-5 h-5" />
                       </button>
                     )}
+                    {/* Download audio */}
                     <button
-                      onClick={() => handleDownloadText(selectedLectureDetails.title, selectedLectureDetails.summary, selectedLectureDetails.transcript)}
+                      onClick={() => handleDownloadAudio(selectedLectureDetails.id, selectedLectureDetails.title)}
+                      disabled={isDownloadingAudio}
+                      className="btn-icon disabled:opacity-40"
+                      title="Download Audio"
+                    >
+                      {isDownloadingAudio
+                        ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
+                        : <Headphones className="w-5 h-5" />}
+                    </button>
+                    {/* Download transcript + summary as .txt */}
+                    <button
+                      onClick={() => handleDownloadTranscript(selectedLectureDetails.title, selectedLectureDetails.summary, selectedLectureDetails.transcript)}
                       className="btn-icon"
-                      title="Download Text Outline"
+                      title="Download Transcript"
                     >
                       <Download className="w-5 h-5" />
                     </button>

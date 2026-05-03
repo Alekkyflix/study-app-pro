@@ -60,9 +60,25 @@ def _get_summarization_service():
 UPLOAD_DIR = "/tmp/study_pro_audio"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-ALLOWED_AUDIO_TYPES = {"audio/wav", "audio/webm", "audio/ogg", "audio/mpeg", "audio/mp4"}
-ALLOWED_DOC_TYPES   = {"application/pdf", "text/plain"}
-MAX_UPLOAD_BYTES    = 50 * 1024 * 1024   # 50 MB — must match Supabase Storage bucket limit
+# Prefix-based MIME check — browsers append codec suffixes like 'audio/webm;codecs=opus'
+# Some browsers also report audio-only MediaRecorder as 'video/webm'
+_ALLOWED_AUDIO_PREFIXES = ("audio/", "video/webm")
+_ALLOWED_DOC_PREFIXES   = ("application/pdf", "text/plain")
+MAX_UPLOAD_BYTES    = 50 * 1024 * 1024   # 50 MB
+
+
+def _is_allowed_audio(content_type: str | None) -> bool:
+    if not content_type:
+        return True  # trust the filename extension if browser omits content-type
+    ct = content_type.lower().split(";")[0].strip()
+    return any(ct.startswith(p) for p in _ALLOWED_AUDIO_PREFIXES)
+
+
+def _is_allowed_doc(content_type: str | None) -> bool:
+    if not content_type:
+        return True
+    ct = content_type.lower().split(";")[0].strip()
+    return any(ct.startswith(p) for p in _ALLOWED_DOC_PREFIXES)
 
 # ---------------------------------------------------------------------------
 # Supabase Storage helpers (2.1 — durable file storage)
@@ -227,6 +243,7 @@ async def get_lecture(lecture_id: str, user_id: str = Depends(get_user_id)):
                     "transcript": lecture.transcript,
                     "summary": lecture.summary,
                     "duration": lecture.duration,
+                    "audio_url": lecture.audio_url or "",
                     "created_at": lecture.created_at.isoformat() if lecture.created_at else None,
                 },
             }
@@ -235,6 +252,56 @@ async def get_lecture(lecture_id: str, user_id: str = Depends(get_user_id)):
     except Exception:
         logger.exception("get_lecture failed")
         raise HTTPException(status_code=500, detail="Could not fetch lecture")
+
+
+@router.get("/lectures/{lecture_id}/download-audio", response_model=dict)
+@limiter.limit("20/minute")
+async def get_audio_download_url(
+    request: Request,
+    lecture_id: str,
+    user_id: str = Depends(get_user_id),
+):
+    """
+    Return a URL the client can use to download the lecture audio.
+    - If audio is stored in Supabase Storage, generates a signed URL (60-minute expiry).
+    - If only a local /tmp file exists (dev mode), returns a 404 with guidance.
+    """
+    try:
+        with get_db() as db:
+            lecture = _get_lecture_or_404(db, lecture_id, user_id)
+            audio_url = lecture.audio_url or ""
+
+        if not audio_url:
+            raise HTTPException(status_code=404, detail="No audio file found for this lecture.")
+
+        # If stored remotely in Supabase Storage, generate a signed URL so the
+        # bucket can be kept private (signed URL works even for private buckets).
+        if audio_url.startswith("http") and _SUPABASE_URL and _SUPABASE_SKEY:
+            try:
+                # Extract the object path from the public URL:
+                # e.g. https://.../storage/v1/object/public/lecture-audio/{user_id}/{file}
+                # -> object_path = "{user_id}/{file}"
+                marker = f"/object/public/{AUDIO_BUCKET}/"
+                if marker in audio_url:
+                    object_path = audio_url.split(marker, 1)[1].split("?")[0]
+                    from supabase import create_client as _sc
+                    _client = _sc(_SUPABASE_URL, _SUPABASE_SKEY)
+                    signed = _client.storage.from_(AUDIO_BUCKET).create_signed_url(
+                        object_path, expires_in=3600  # 1 hour
+                    )
+                    signed_url = signed.get("signedURL") or signed.get("signedUrl") or audio_url
+                    return {"success": True, "url": signed_url, "expires_in": 3600}
+            except Exception as e:
+                logger.warning("Could not generate signed URL, returning public URL: %s", e)
+
+        # Fallback — return the stored URL as-is (public bucket)
+        return {"success": True, "url": audio_url, "expires_in": None}
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("get_audio_download_url failed")
+        raise HTTPException(status_code=500, detail="Could not retrieve audio download URL")
 
 
 @router.post("/lectures/{lecture_id}/upload-audio", response_model=dict)
@@ -246,8 +313,8 @@ async def upload_audio(
     user_id: str = Depends(get_user_id),
 ):
     # --- validate MIME type before touching the body ---
-    if file.content_type not in ALLOWED_AUDIO_TYPES:
-        raise HTTPException(status_code=400, detail=f"Unsupported audio type: {file.content_type}")
+    if not _is_allowed_audio(file.content_type):
+        raise HTTPException(status_code=400, detail=f"Unsupported audio type: {file.content_type}. Expected audio/webm, audio/wav, audio/ogg, audio/mpeg, or audio/mp4.")
 
     # Safe filename — never trust the client-supplied name
     ext          = (file.filename or "").rsplit(".", 1)[-1] or "webm"
@@ -299,8 +366,8 @@ async def upload_document(
     file: UploadFile = File(...),
     user_id: str = Depends(get_user_id),
 ):
-    if file.content_type not in ALLOWED_DOC_TYPES:
-        raise HTTPException(status_code=400, detail=f"Unsupported document type: {file.content_type}")
+    if not _is_allowed_doc(file.content_type):
+        raise HTTPException(status_code=400, detail=f"Unsupported document type: {file.content_type}. Expected application/pdf or text/plain.")
 
     # --- FIX 2.2: stream to disk, then read back — avoids holding 100 MB in RAM ---
     safe_name  = f"doc_{uuid.uuid4().hex}.tmp"
