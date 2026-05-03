@@ -103,7 +103,6 @@ async def send_message(
                 )
             raise HTTPException(status_code=500, detail=result.get("error", "AI could not generate a response"))
 
-        import uuid as _uuid  # noqa: F401 (already imported above — kept for clarity)
         now = datetime.utcnow()
         with get_db() as db:
             db.add(ChatMessage(
