@@ -18,31 +18,34 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
-# Cache the Supabase URL so we're not hitting os.getenv on every request
-_SUPABASE_URL = ""
-_SUPABASE_ANON_KEY = ""
-
-
-def _get_supabase_config() -> tuple[str, str]:
-    global _SUPABASE_URL, _SUPABASE_ANON_KEY
-    if not _SUPABASE_URL:
-        _SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-        _SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY", "") or os.getenv("SUPABASE_ANON_KEY", "")
-    return _SUPABASE_URL, _SUPABASE_ANON_KEY
+# Read once at startup — all three values should be set in the Render dashboard
+_SUPABASE_URL      = os.getenv("SUPABASE_URL", "")
+# apikey header: anon key preferred; service-role key as fallback (both work for /auth/v1/user)
+_SUPABASE_API_KEY  = (
+    os.getenv("SUPABASE_KEY")
+    or os.getenv("SUPABASE_ANON_KEY")
+    or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+)
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     """
-    Validate a Supabase JWT by calling the Supabase Auth /user endpoint.
-    Returns the user object dict on success.
+    Validate a Supabase JWT by calling Supabase's own /auth/v1/user endpoint.
+    Requires SUPABASE_URL + any valid apikey (anon or service-role).
     """
     token = credentials.credentials
-    supabase_url, anon_key = _get_supabase_config()
 
-    if not supabase_url:
+    if not _SUPABASE_URL:
         logger.error("SUPABASE_URL is not set")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server authentication is misconfigured.",
+        )
+
+    if not _SUPABASE_API_KEY:
+        logger.error("No Supabase API key configured (SUPABASE_KEY / SUPABASE_SERVICE_ROLE_KEY)")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server authentication is misconfigured.",
@@ -50,10 +53,10 @@ def get_current_user(
 
     try:
         resp = httpx.get(
-            f"{supabase_url}/auth/v1/user",
+            f"{_SUPABASE_URL}/auth/v1/user",
             headers={
                 "Authorization": f"Bearer {token}",
-                "apikey": anon_key,
+                "apikey": _SUPABASE_API_KEY,
             },
             timeout=10.0,
         )

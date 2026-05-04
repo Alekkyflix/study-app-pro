@@ -10,7 +10,11 @@ interface ToastContainerProps {
 
 const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
   return (
-    <div className="fixed bottom-24 md:bottom-6 left-0 right-0 z-[100] px-4 pointer-events-none flex flex-col items-center gap-3">
+    <div className="
+      fixed z-[100] pointer-events-none
+      bottom-20 left-0 right-0 flex flex-col items-center gap-2 px-4
+      sm:bottom-6 sm:left-4 sm:right-auto sm:items-start sm:w-[360px]
+    ">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={() => onRemove(toast.id)} />
