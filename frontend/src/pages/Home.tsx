@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Upload, Save, Mic, FileText, MessageSquare, DownloadCloud, Loader, FileUp } from "lucide-react";
+import { Upload, Save, Mic, FileText, MessageSquare, DownloadCloud, Loader, FileUp, AlertTriangle, RefreshCw } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { RecordingInterface } from "../components/RecordingInterface";
 import { Waveform } from "../components/Waveform";
@@ -48,6 +48,10 @@ export function Home() {
   const [summary, setSummary] = useState<string>("");
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [showReportPanel, setShowReportPanel] = useState(false);
+  // saveError: holds error message when save partially failed (audio blob is still kept)
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Tracks a lecture already created in DB so retry uploads to the same ID, not a new one
+  const pendingLectureIdRef = useRef<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -224,19 +228,22 @@ export function Home() {
         return;
       }
 
+      setSaveError(null);
       setLoading(true);
       setGlobalLoading(true, "Saving your lecture...");
-      setStatus("Creating lecture...");
 
-      // Step 1: Create lecture entry
-      const lectureRes = await apiClient.createLecture(lectureTitle);
-      if (!lectureRes.success) {
-        throw new Error(lectureRes.error || "Failed to create lecture");
+      // Step 1: Create lecture entry — skip if we already have one from a previous failed attempt
+      if (!pendingLectureIdRef.current) {
+        setStatus("Creating lecture...");
+        const lectureRes = await apiClient.createLecture(lectureTitle);
+        if (!lectureRes.success) {
+          throw new Error(lectureRes.error || "Failed to create lecture");
+        }
+        pendingLectureIdRef.current = lectureRes.lecture_id.toString();
       }
 
-      const lectureId = lectureRes.lecture_id.toString();
-      setCurrentLectureId(lectureId);
-      
+      const lectureId = pendingLectureIdRef.current!;
+
       // Step 2: Upload audio
       setStatus("Uploading audio...");
       const uploadRes = await apiClient.uploadAudio(lectureId, audioBlob);
@@ -244,6 +251,9 @@ export function Home() {
         throw new Error(uploadRes.error || "Failed to upload audio");
       }
 
+      // Both steps succeeded — commit state
+      pendingLectureIdRef.current = null;
+      setCurrentLectureId(lectureId);
       showSuccess("Lecture Saved", "Your lecture has been saved successfully");
       setStatus("✅ Lecture saved! Ready for transcription.");
       setDuration(0);
@@ -254,15 +264,24 @@ export function Home() {
         await handleTranscribe(lectureId);
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Failed to save lecture";
       console.error("Error saving lecture:", error);
-      setStatus(`❌ ${error instanceof Error ? error.message : "Failed to save"}`);
-      showError("Save Failed", error instanceof Error ? error.message : "Failed to save lecture", {
-        retry: handleSave
-      });
+      setStatus("");
+      // Keep audioBlob intact so the user can retry or discard manually
+      setSaveError(msg);
     } finally {
       setLoading(false);
       setGlobalLoading(false);
     }
+  };
+
+  const handleDiscardRecording = () => {
+    // Clear everything so the user can start fresh
+    setAudioBlob(null);
+    setSaveError(null);
+    pendingLectureIdRef.current = null;
+    setStatus("");
+    setDuration(0);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isDocument: boolean) => {
@@ -477,16 +496,39 @@ export function Home() {
           />
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — shown when recording done but not yet saved */}
         {audioBlob && !currentLectureId && (
           <div className="space-y-3">
+            {/* Inline save error banner — persistent, not a toast */}
+            {saveError && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-red-800">Save Failed</p>
+                  <p className="text-xs text-red-600 mt-0.5 break-words">{saveError}</p>
+                  {pendingLectureIdRef.current && (
+                    <p className="text-xs text-red-500 mt-1">Lecture entry was created — retry will upload to the same entry.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleSave}
               disabled={loading}
               className="btn-primary w-full py-4 text-lg"
             >
-              {loading ? <InlineLoader /> : <Save className="w-5 h-5" />}
-              {loading ? "" : "Save Lecture"}
+              {loading ? <InlineLoader /> : saveError ? <RefreshCw className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+              {loading ? "" : saveError ? "Retry Save" : "Save Lecture"}
+            </button>
+
+            {/* Discard button only shown when there's an error or audio is ready */}
+            <button
+              onClick={handleDiscardRecording}
+              disabled={loading}
+              className="w-full py-3 text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Discard Recording
             </button>
           </div>
         )}
