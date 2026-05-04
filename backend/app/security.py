@@ -1,69 +1,89 @@
+"""
+JWT verification via Supabase Auth API.
+
+Instead of verifying the JWT locally (which requires getting the secret format
+exactly right), we ask Supabase's own /auth/v1/user endpoint to validate the
+token. This is 100% reliable regardless of how the secret is stored.
+
+Trade-off: one extra HTTP round-trip per request (~50–100 ms). For a student
+app this is acceptable; if you need sub-ms auth switch back to local JWT verify
+once the secret format is confirmed.
+"""
 import os
 import logging
-import jwt
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
+# Cache the Supabase URL so we're not hitting os.getenv on every request
+_SUPABASE_URL = ""
+_SUPABASE_ANON_KEY = ""
+
+
+def _get_supabase_config() -> tuple[str, str]:
+    global _SUPABASE_URL, _SUPABASE_ANON_KEY
+    if not _SUPABASE_URL:
+        _SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+        _SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY", "") or os.getenv("SUPABASE_ANON_KEY", "")
+    return _SUPABASE_URL, _SUPABASE_ANON_KEY
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
     """
-    Validate Supabase JWT and return the decoded payload.
-    The payload contains 'sub' (user UUID) among other Supabase claims.
+    Validate a Supabase JWT by calling the Supabase Auth /user endpoint.
+    Returns the user object dict on success.
     """
     token = credentials.credentials
-    jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+    supabase_url, anon_key = _get_supabase_config()
 
-    if not jwt_secret:
-        logger.error("SUPABASE_JWT_SECRET is not set — cannot validate tokens")
+    if not supabase_url:
+        logger.error("SUPABASE_URL is not set")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server authentication is misconfigured.",
         )
 
     try:
-        # Supabase JWT secrets are base64-encoded in the dashboard but GoTrue signs
-        # tokens with the decoded bytes. Try decoded bytes first, fall back to raw string.
-        import base64 as _b64
-        try:
-            secret_bytes = _b64.b64decode(jwt_secret + "==")  # pad in case of missing =
-        except Exception:
-            secret_bytes = jwt_secret.encode()
+        resp = httpx.get(
+            f"{supabase_url}/auth/v1/user",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "apikey": anon_key,
+            },
+            timeout=10.0,
+        )
+    except httpx.RequestError as exc:
+        logger.error("Supabase auth request failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service unavailable. Please try again.",
+        )
 
-        # First attempt: decoded bytes (correct for most Supabase projects)
-        decode_errors = []
-        for key in (secret_bytes, jwt_secret):
-            try:
-                payload = jwt.decode(
-                    token,
-                    key,
-                    algorithms=["HS256"],
-                    audience="authenticated",
-                )
-                return payload
-            except jwt.ExpiredSignatureError:
-                raise  # re-raise immediately — no point trying the other key
-            except jwt.InvalidTokenError as e:
-                decode_errors.append(str(e))
-
-        # Both keys failed
-        logger.warning("JWT decode failed with both key forms: %s", decode_errors)
-        raise jwt.InvalidTokenError("Invalid token")
-
-    except jwt.ExpiredSignatureError:
+    if resp.status_code in (401, 403):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired — please log in again.",
         )
-    except jwt.InvalidTokenError:
+
+    if resp.status_code != 200:
+        logger.warning("Supabase auth returned %s: %s", resp.status_code, resp.text[:200])
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication failed.",
         )
+
+    user_data = resp.json()
+    # Normalise to look like a JWT payload so the rest of the code is unchanged
+    return {
+        "sub": user_data.get("id"),
+        "email": user_data.get("email"),
+        "role": user_data.get("role", "authenticated"),
+    }
 
 
 def get_user_id(current_user: dict = Depends(get_current_user)) -> str:
