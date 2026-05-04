@@ -516,7 +516,7 @@ export function Home() {
             }}
             onStop={handleStop}
             onPlay={handlePlay}
-            onPause={() => setIsPlaying(false)}
+            onPause={stopAudio}
             isPlaying={isPlaying}
             duration={duration}
           />

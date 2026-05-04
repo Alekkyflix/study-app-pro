@@ -26,13 +26,34 @@ def get_current_user(
         )
 
     try:
-        payload = jwt.decode(
-            token,
-            jwt_secret,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-        return payload
+        # Supabase JWT secrets are base64-encoded in the dashboard but GoTrue signs
+        # tokens with the decoded bytes. Try decoded bytes first, fall back to raw string.
+        import base64 as _b64
+        try:
+            secret_bytes = _b64.b64decode(jwt_secret + "==")  # pad in case of missing =
+        except Exception:
+            secret_bytes = jwt_secret.encode()
+
+        # First attempt: decoded bytes (correct for most Supabase projects)
+        decode_errors = []
+        for key in (secret_bytes, jwt_secret):
+            try:
+                payload = jwt.decode(
+                    token,
+                    key,
+                    algorithms=["HS256"],
+                    audience="authenticated",
+                )
+                return payload
+            except jwt.ExpiredSignatureError:
+                raise  # re-raise immediately — no point trying the other key
+            except jwt.InvalidTokenError as e:
+                decode_errors.append(str(e))
+
+        # Both keys failed
+        logger.warning("JWT decode failed with both key forms: %s", decode_errors)
+        raise jwt.InvalidTokenError("Invalid token")
+
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
