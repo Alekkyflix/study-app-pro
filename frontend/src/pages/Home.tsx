@@ -60,6 +60,8 @@ export function Home() {
   const timerRef = useRef<number>();
   const audioInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  // Stores the currently playing Audio element so we can stop it programmatically
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   // Wake Lock sentinel — keeps the screen on during recording
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   // Whether the tab went to background during an active recording
@@ -197,14 +199,35 @@ export function Home() {
     setIsRecording(false);
   };
 
+  // Stop and clean up any currently playing audio preview
+  const stopAudio = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.src = "";   // releases the object URL hold
+      audioPlayerRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
   const handlePlay = () => {
     if (!audioBlob) return;
 
+    // If already playing, stop it (toggle)
+    if (audioPlayerRef.current) {
+      stopAudio();
+      return;
+    }
+
     const url = URL.createObjectURL(audioBlob);
     const audio = new Audio(url);
+    audioPlayerRef.current = audio;
 
     audio.onplay = () => setIsPlaying(true);
-    audio.onended = () => setIsPlaying(false);
+    audio.onended = () => {
+      URL.revokeObjectURL(url);   // free memory once done
+      audioPlayerRef.current = null;
+      setIsPlaying(false);
+    };
     audio.onpause = () => setIsPlaying(false);
 
     audio.play();
@@ -222,6 +245,9 @@ export function Home() {
     }
 
     try {
+      // Stop any audio preview before saving
+      stopAudio();
+
       // --- WiFi-only guard ---
       if (!checkWifiOnly(settings.wifiOnly)) {
         showWarning('WiFi Only', 'You are on mobile data. Disable "WiFi Only" in Settings to upload on cellular.');
@@ -276,7 +302,7 @@ export function Home() {
   };
 
   const handleDiscardRecording = () => {
-    // Clear everything so the user can start fresh
+    stopAudio();  // stop preview if playing
     setAudioBlob(null);
     setSaveError(null);
     pendingLectureIdRef.current = null;
