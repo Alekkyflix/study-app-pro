@@ -9,12 +9,23 @@ interface ToastContainerProps {
 }
 
 const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => {
+  // Position: bottom-left on desktop, bottom-center on mobile (above nav bar)
+  const containerStyle: React.CSSProperties = {
+    position: 'fixed',
+    bottom: window.innerWidth >= 640 ? '24px' : '80px',
+    left: window.innerWidth >= 640 ? '16px' : '50%',
+    transform: window.innerWidth >= 640 ? 'none' : 'translateX(-50%)',
+    width: window.innerWidth >= 640 ? '360px' : 'calc(100vw - 32px)',
+    maxWidth: '360px',
+    zIndex: 9999,
+    pointerEvents: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  };
+
   return (
-    <div className="
-      fixed z-[100] pointer-events-none
-      bottom-20 left-0 right-0 flex flex-col items-center gap-2 px-4
-      sm:bottom-6 sm:left-4 sm:right-auto sm:items-start sm:w-[360px]
-    ">
+    <div style={containerStyle}>
       <AnimatePresence mode="popLayout">
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={() => onRemove(toast.id)} />
@@ -24,26 +35,26 @@ const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => 
   );
 };
 
-const colorMap: Record<NotificationType, { bar: string; icon: React.ReactNode; border: string }> = {
+const colorMap: Record<NotificationType, { bar: string; border: string; icon: React.ReactNode }> = {
   success: {
-    bar: 'bg-green-500',
-    border: 'border-l-green-500',
-    icon: <CheckCircle2 className="w-5 h-5 text-green-500" />,
+    bar: '#22c55e',
+    border: '#22c55e',
+    icon: <CheckCircle2 style={{ width: 20, height: 20, color: '#22c55e' }} />,
   },
   error: {
-    bar: 'bg-red-500',
-    border: 'border-l-red-500',
-    icon: <XCircle className="w-5 h-5 text-red-500" />,
+    bar: '#ef4444',
+    border: '#ef4444',
+    icon: <XCircle style={{ width: 20, height: 20, color: '#ef4444' }} />,
   },
   warning: {
-    bar: 'bg-amber-500',
-    border: 'border-l-amber-500',
-    icon: <AlertCircle className="w-5 h-5 text-amber-500" />,
+    bar: '#f59e0b',
+    border: '#f59e0b',
+    icon: <AlertCircle style={{ width: 20, height: 20, color: '#f59e0b' }} />,
   },
   info: {
-    bar: 'bg-blue-500',
-    border: 'border-l-blue-500',
-    icon: <Info className="w-5 h-5 text-blue-500" />,
+    bar: '#3b82f6',
+    border: '#3b82f6',
+    icon: <Info style={{ width: 20, height: 20, color: '#3b82f6' }} />,
   },
 };
 
@@ -52,12 +63,10 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: () => void }> = ({ toast, on
   const { bar, border, icon } = colorMap[toast.type];
   const title = toast.title || (toast.type.charAt(0).toUpperCase() + toast.type.slice(1));
 
-  // Kick off the CSS width animation one frame after mount so the transition runs
+  // Start the progress bar animation one frame after mount
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      if (barRef.current) {
-        barRef.current.style.width = '0%';
-      }
+      if (barRef.current) barRef.current.style.width = '0%';
     });
     return () => cancelAnimationFrame(frame);
   }, []);
@@ -65,31 +74,46 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: () => void }> = ({ toast, on
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 40, scale: 0.92 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 16, scale: 0.95, transition: { duration: 0.18 } }}
-      className={`
-        pointer-events-auto
-        w-full max-w-sm
-        bg-white rounded-2xl overflow-hidden
-        border border-gray-100 border-l-4 ${border}
-        shadow-xl shadow-black/8
-      `}
+      exit={{ opacity: 0, y: 10, scale: 0.95, transition: { duration: 0.15 } }}
+      style={{
+        pointerEvents: 'auto',
+        width: '100%',
+        background: '#ffffff',
+        borderRadius: '16px',
+        borderLeft: `4px solid ${border}`,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)',
+        overflow: 'hidden',
+      }}
     >
-      {/* Content row */}
-      <div className="flex gap-3 items-start p-4">
-        <div className="mt-0.5 shrink-0">{icon}</div>
+      {/* Content */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 14px 12px 14px' }}>
+        <div style={{ flexShrink: 0, marginTop: 1 }}>{icon}</div>
 
-        <div className="flex-1 min-w-0">
+        <div style={{ flex: 1, minWidth: 0 }}>
           {title && (
-            <h4 className="text-sm font-bold text-gray-900 leading-tight">{title}</h4>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.3 }}>
+              {title}
+            </p>
           )}
-          <p className="text-sm text-gray-600 mt-0.5 leading-snug">{toast.message}</p>
-
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: '#4b5563', lineHeight: 1.4 }}>
+            {toast.message}
+          </p>
           {toast.type === 'error' && toast.retry && (
             <button
               onClick={() => { toast.retry!(); onRemove(); }}
-              className="mt-2 text-xs font-bold text-red-600 hover:text-red-700 underline underline-offset-2"
+              style={{
+                marginTop: 6,
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#dc2626',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
             >
               Try Again
             </button>
@@ -98,19 +122,30 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: () => void }> = ({ toast, on
 
         <button
           onClick={onRemove}
-          className="p-1 rounded-full hover:bg-gray-100 transition-colors shrink-0"
+          style={{
+            flexShrink: 0,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 4,
+            borderRadius: 999,
+            color: '#9ca3af',
+            lineHeight: 1,
+          }}
           aria-label="Dismiss"
         >
-          <X className="w-4 h-4 text-gray-400" />
+          <X style={{ width: 16, height: 16 }} />
         </button>
       </div>
 
-      {/* Progress bar — shrinks from full width to 0 over toast.duration ms */}
-      <div className="h-0.5 bg-gray-100 w-full">
+      {/* Progress bar */}
+      <div style={{ height: 3, background: '#f3f4f6' }}>
         <div
           ref={barRef}
-          className={`h-full ${bar} w-full`}
           style={{
+            height: '100%',
+            width: '100%',
+            background: bar,
             transition: `width ${toast.duration}ms linear`,
             willChange: 'width',
           }}
