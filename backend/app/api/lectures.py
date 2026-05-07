@@ -174,6 +174,16 @@ async def create_lecture(
                 db.add(User(id=user_id, created_at=datetime.utcnow()))
                 db.commit()
 
+            #Block duplicate titles for the same user
+            duplicate = db.query(Lecture).filter(
+                Lecture.user_id == user_id,
+                Lecture.title == title.strip()
+            ).first()
+            if duplicate:
+                raise HTTPException(
+                    status_code=409, 
+                    detail=f"A lecture named '{title.strip()}' already exists. Please use a different title.")
+
             lecture = Lecture(
                 id=str(uuid.uuid4()),
                 user_id=user_id,
