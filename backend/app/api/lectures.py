@@ -19,7 +19,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from app.database.db import SessionLocal
-from app.models.database import Lecture
+from app.models.database import Lecture, User
 from app.security import get_user_id
 
 # Re-use the limiter singleton created in main.py
@@ -182,6 +182,14 @@ async def create_lecture(
 ):
     try:
         with get_db() as db:
+            # Ensure a user row exists for this Supabase user before inserting the lecture.
+            # The Lecture.user_id FK references users.id — without this upsert, PostgreSQL
+            # raises an IntegrityError on the first lecture creation for any new user.
+            existing_user = db.query(User).filter(User.id == user_id).first()
+            if not existing_user:
+                db.add(User(id=user_id, created_at=datetime.utcnow()))
+                db.commit()
+
             lecture = Lecture(
                 id=str(uuid.uuid4()),
                 user_id=user_id,

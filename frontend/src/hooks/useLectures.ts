@@ -8,7 +8,7 @@ export function useLectures() {
 
   useEffect(() => {
     apiClient.getLectures()
-      .then(setLectures)
+      .then((data) => setLectures(data?.lectures ?? []))
       .finally(() => setLoading(false));
   }, []);
 

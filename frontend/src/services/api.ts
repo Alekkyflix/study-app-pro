@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const REQUEST_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 120_000; // 2 min — audio uploads need more than 30s on slow connections
 
 // Warn in non-localhost contexts if VITE_API_URL falls back to localhost
 if (!import.meta.env.VITE_API_URL && !import.meta.env.DEV) {
