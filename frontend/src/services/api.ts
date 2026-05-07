@@ -1,9 +1,8 @@
 import { supabase } from '../lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const REQUEST_TIMEOUT_MS = 120_000; // 2 min — audio uploads need more than 30s on slow connections
+const REQUEST_TIMEOUT_MS = 120_000; // 2 min — audio uploads need more than 30s
 
-// Warn in non-localhost contexts if VITE_API_URL falls back to localhost
 if (!import.meta.env.VITE_API_URL && !import.meta.env.DEV) {
   console.warn(
     '[StudyPro] VITE_API_URL is not set. API calls will route to http://localhost:8000, ' +
@@ -11,9 +10,6 @@ if (!import.meta.env.VITE_API_URL && !import.meta.env.DEV) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Auth header helper
-// ---------------------------------------------------------------------------
 const getAuthHeaders = async (
   extra: Record<string, string> = {}
 ): Promise<Record<string, string>> => {
@@ -24,9 +20,6 @@ const getAuthHeaders = async (
   return extra;
 };
 
-// ---------------------------------------------------------------------------
-// Core fetch wrapper — adds auth, timeout, and structured error handling
-// ---------------------------------------------------------------------------
 async function apiFetch(
   path: string,
   options: RequestInit = {}
@@ -74,22 +67,15 @@ export class ApiError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Network guard — blocks mobile data uploads if wifiOnly setting is active
-// ---------------------------------------------------------------------------
 export function checkWifiOnly(wifiOnly: boolean): boolean {
   if (!wifiOnly) return true;
   const conn = (navigator as any).connection;
-  if (!conn) return true; // Network Information API not available — allow
+  if (!conn) return true;
   const type: string = conn.type || conn.effectiveType || '';
   const isCellular = type === 'cellular' || type.startsWith('2g') || type.startsWith('3g');
-  return !isCellular; // returns false if on cellular (blocked)
+  return !isCellular;
 }
 
-
-// ---------------------------------------------------------------------------
-// API client
-// ---------------------------------------------------------------------------
 export class ApiClient {
   getLectures() {
     return apiFetch('/api/lectures');
@@ -157,7 +143,6 @@ export class ApiClient {
     return apiFetch('/api/reports/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // Backend expects singular lecture_id (string), not an array
       body: JSON.stringify({ lecture_id: lectureId, report_type: reportType }),
     });
   }

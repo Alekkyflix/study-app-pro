@@ -81,7 +81,7 @@ def _is_allowed_doc(content_type: str | None) -> bool:
     return any(ct.startswith(p) for p in _ALLOWED_DOC_PREFIXES)
 
 # ---------------------------------------------------------------------------
-# Supabase Storage helpers (2.1 — durable file storage)
+# Supabase Storage helpers
 # ---------------------------------------------------------------------------
 _SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
 _SUPABASE_SKEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
@@ -182,9 +182,9 @@ async def create_lecture(
 ):
     try:
         with get_db() as db:
-            # Ensure a user row exists for this Supabase user before inserting the lecture.
-            # The Lecture.user_id FK references users.id — without this upsert, PostgreSQL
-            # raises an IntegrityError on the first lecture creation for any new user.
+            # Upsert user row — Lecture.user_id FK references users.id.
+            # Supabase users authenticate externally and never get a local row
+            # automatically, so PostgreSQL raises IntegrityError without this.
             existing_user = db.query(User).filter(User.id == user_id).first()
             if not existing_user:
                 db.add(User(id=user_id, created_at=datetime.utcnow()))
@@ -269,11 +269,6 @@ async def get_audio_download_url(
     lecture_id: str,
     user_id: str = Depends(get_user_id),
 ):
-    """
-    Return a URL the client can use to download the lecture audio.
-    - If audio is stored in Supabase Storage, generates a signed URL (60-minute expiry).
-    - If only a local /tmp file exists (dev mode), returns a 404 with guidance.
-    """
     try:
         with get_db() as db:
             lecture = _get_lecture_or_404(db, lecture_id, user_id)
@@ -282,27 +277,21 @@ async def get_audio_download_url(
         if not audio_url:
             raise HTTPException(status_code=404, detail="No audio file found for this lecture.")
 
-        # If stored remotely in Supabase Storage, generate a signed URL so the
-        # bucket can be kept private (signed URL works even for private buckets).
         if audio_url.startswith("http") and _SUPABASE_URL and _SUPABASE_SKEY:
             try:
-                # Extract the object path from the public URL:
-                # e.g. https://.../storage/v1/object/public/lecture-audio/{user_id}/{file}
-                # -> object_path = "{user_id}/{file}"
                 marker = f"/object/public/{AUDIO_BUCKET}/"
                 if marker in audio_url:
                     object_path = audio_url.split(marker, 1)[1].split("?")[0]
                     from supabase import create_client as _sc
                     _client = _sc(_SUPABASE_URL, _SUPABASE_SKEY)
                     signed = _client.storage.from_(AUDIO_BUCKET).create_signed_url(
-                        object_path, expires_in=3600  # 1 hour
+                        object_path, expires_in=3600
                     )
                     signed_url = signed.get("signedURL") or signed.get("signedUrl") or audio_url
                     return {"success": True, "url": signed_url, "expires_in": 3600}
             except Exception as e:
                 logger.warning("Could not generate signed URL, returning public URL: %s", e)
 
-        # Fallback — return the stored URL as-is (public bucket)
         return {"success": True, "url": audio_url, "expires_in": None}
 
     except HTTPException:
@@ -320,11 +309,9 @@ async def upload_audio(
     file: UploadFile = File(...),
     user_id: str = Depends(get_user_id),
 ):
-    # --- validate MIME type before touching the body ---
     if not _is_allowed_audio(file.content_type):
         raise HTTPException(status_code=400, detail=f"Unsupported audio type: {file.content_type}. Expected audio/webm, audio/wav, audio/ogg, audio/mpeg, or audio/mp4.")
 
-    # Safe filename — never trust the client-supplied name
     ext          = (file.filename or "").rsplit(".", 1)[-1] or "webm"
     safe_name    = f"lecture_{lecture_id}_{uuid.uuid4().hex}.{ext}"
     local_path   = os.path.join(UPLOAD_DIR, safe_name)
@@ -334,25 +321,20 @@ async def upload_audio(
         with get_db() as db:
             _get_lecture_or_404(db, lecture_id, user_id)
 
-        # --- FIX 2.2: stream to disk in chunks (no full read into RAM) ---
         with open(local_path, "wb") as disk_file:
             shutil.copyfileobj(file.file, disk_file)
 
-        # --- check size on disk, not in memory ---
         if os.path.getsize(local_path) > MAX_UPLOAD_BYTES:
             _delete_local(local_path)
-            raise HTTPException(status_code=413, detail="File too large (max 100 MB)")
+            raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
-        # --- FIX 2.1: persist to Supabase Storage ---
         audio_url = _storage_upload(local_path, object_name, file.content_type or "audio/webm")
 
-        # Store the remote URL (or empty string for local-dev) in the DB
         with get_db() as db:
             lecture = _get_lecture_or_404(db, lecture_id, user_id)
             lecture.audio_url = audio_url or ""
             db.commit()
 
-        # FIX 2.4: if upload to storage succeeded, local copy is disposable
         if audio_url:
             _delete_local(local_path)
 
@@ -377,7 +359,6 @@ async def upload_document(
     if not _is_allowed_doc(file.content_type):
         raise HTTPException(status_code=400, detail=f"Unsupported document type: {file.content_type}. Expected application/pdf or text/plain.")
 
-    # --- FIX 2.2: stream to disk, then read back — avoids holding 100 MB in RAM ---
     safe_name  = f"doc_{uuid.uuid4().hex}.tmp"
     local_path = os.path.join(UPLOAD_DIR, safe_name)
 
@@ -387,9 +368,8 @@ async def upload_document(
 
         if os.path.getsize(local_path) > MAX_UPLOAD_BYTES:
             _delete_local(local_path)
-            raise HTTPException(status_code=413, detail="File too large (max 100 MB)")
+            raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
-        # --- FIX 2.3: parse PDF in a thread so the event loop is not blocked ---
         def _parse_doc() -> str:
             if file.content_type == "application/pdf":
                 import PyPDF2
@@ -402,7 +382,7 @@ async def upload_document(
                 return f.read()
 
         extracted_text = await run_in_threadpool(_parse_doc)
-        _delete_local(local_path)   # FIX 2.4: discard temp doc file immediately
+        _delete_local(local_path)
 
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from document")
@@ -431,7 +411,7 @@ async def upload_document(
 async def transcribe_lecture(
     request: Request,
     lecture_id: str,
-    model: str = "balanced",   # fast | balanced | accurate — maps to Whisper model sizes
+    model: str = "balanced",
     user_id: str = Depends(get_user_id),
 ):
     try:
@@ -439,11 +419,9 @@ async def transcribe_lecture(
             lecture = _get_lecture_or_404(db, lecture_id, user_id)
             audio_url  = lecture.audio_url or ""
 
-        # --- FIX 2.1: resolve the audio file — prefer Supabase Storage URL ---
         tmp_path_to_clean: str | None = None
 
         if audio_url.startswith("http"):
-            # Download from remote storage to a throw-away local file
             tmp_name   = f"tmp_tx_{lecture_id}_{uuid.uuid4().hex}.webm"
             local_path = os.path.join(UPLOAD_DIR, tmp_name)
             ok = await run_in_threadpool(_storage_download_to_local, audio_url, local_path)
@@ -451,7 +429,6 @@ async def transcribe_lecture(
                 raise HTTPException(status_code=500, detail="Could not retrieve audio from storage")
             tmp_path_to_clean = local_path
         else:
-            # Local dev fallback: find by lecture_id prefix
             matching = [
                 f for f in os.listdir(UPLOAD_DIR)
                 if f.startswith(f"lecture_{lecture_id}_")
@@ -460,8 +437,6 @@ async def transcribe_lecture(
                 raise HTTPException(status_code=400, detail="No audio file found — please upload audio first")
             local_path = os.path.join(UPLOAD_DIR, matching[-1])
 
-        # --- FIX 2.3: run Whisper in a thread — it is CPU-bound and blocks for minutes ---
-        # Map the settings model preference to a Whisper model size string
         _model_map = {"fast": "tiny", "balanced": "base", "accurate": "medium"}
         _whisper_size = _model_map.get(model, "base")
 
@@ -474,7 +449,6 @@ async def transcribe_lecture(
 
         result = await run_in_threadpool(_transcription_service_for_model().transcribe, local_path)
 
-        # --- FIX 2.4: delete temp file immediately after transcription ---
         if tmp_path_to_clean:
             _delete_local(tmp_path_to_clean)
 
@@ -517,7 +491,6 @@ async def summarize_lecture(
                 raise HTTPException(status_code=400, detail="No transcript available — transcribe first")
             transcript = lecture.transcript
 
-        # --- FIX 2.3: Gemini SDK call is blocking I/O — run in thread ---
         svc    = _get_summarization_service()
         result = await run_in_threadpool(svc.summarize, transcript, summary_type)
 
@@ -558,7 +531,6 @@ async def chat_lecture(
         if not api_key:
             return {"success": True, "response": "[Demo] AI not configured — set GEMINI_API_KEY."}
 
-        # --- FIX 2.3: Gemini generate_content is a blocking network call — run in thread ---
         def _call_gemini() -> str:
             import google.generativeai as genai
             from app.prompts import STUDY_PRO_SYSTEM_MESSAGE
@@ -616,7 +588,6 @@ async def delete_lecture(lecture_id: str, user_id: str = Depends(get_user_id)):
             db.delete(lecture)
             db.commit()
 
-        # Clean up audio files for this lecture
         for f in os.listdir(UPLOAD_DIR):
             if f.startswith(f"lecture_{lecture_id}_"):
                 try:

@@ -1,4 +1,3 @@
-// useLectures hook for data fetching
 import { useState, useEffect } from "react";
 import { apiClient } from "../services/api";
 
