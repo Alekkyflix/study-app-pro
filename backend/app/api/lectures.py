@@ -22,9 +22,7 @@ from app.database.db import SessionLocal
 from app.models.database import Lecture, User
 from app.security import get_user_id
 
-# Re-use the limiter singleton created in main.py
 limiter = Limiter(key_func=get_remote_address)
-
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -60,16 +58,14 @@ def _get_summarization_service():
 UPLOAD_DIR = "/tmp/study_pro_audio"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Prefix-based MIME check — browsers append codec suffixes like 'audio/webm;codecs=opus'
-# Some browsers also report audio-only MediaRecorder as 'video/webm'
 _ALLOWED_AUDIO_PREFIXES = ("audio/", "video/webm")
 _ALLOWED_DOC_PREFIXES   = ("application/pdf", "text/plain")
-MAX_UPLOAD_BYTES    = 50 * 1024 * 1024   # 50 MB
+MAX_UPLOAD_BYTES        = 50 * 1024 * 1024  # 50 MB
 
 
 def _is_allowed_audio(content_type: str | None) -> bool:
     if not content_type:
-        return True  # trust the filename extension if browser omits content-type
+        return True
     ct = content_type.lower().split(";")[0].strip()
     return any(ct.startswith(p) for p in _ALLOWED_AUDIO_PREFIXES)
 
@@ -80,19 +76,16 @@ def _is_allowed_doc(content_type: str | None) -> bool:
     ct = content_type.lower().split(";")[0].strip()
     return any(ct.startswith(p) for p in _ALLOWED_DOC_PREFIXES)
 
+
 # ---------------------------------------------------------------------------
 # Supabase Storage helpers
 # ---------------------------------------------------------------------------
 _SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
 _SUPABASE_SKEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-AUDIO_BUCKET   = "lecture-audio"   # Create this bucket in Supabase Storage dashboard
+AUDIO_BUCKET   = "lecture-audio"
 
 
 def _storage_upload(local_path: str, object_name: str, mime: str) -> str | None:
-    """
-    Upload a local file to Supabase Storage.
-    Returns the public URL, or None if storage is not configured (local-dev fallback).
-    """
     if not _SUPABASE_URL or not _SUPABASE_SKEY:
         return None
     try:
@@ -109,10 +102,6 @@ def _storage_upload(local_path: str, object_name: str, mime: str) -> str | None:
 
 
 def _storage_download_to_local(url: str, dest_path: str) -> bool:
-    """
-    Download a file from a remote URL (Supabase Storage) to a local path.
-    Returns True on success.
-    """
     try:
         with httpx.stream("GET", url, follow_redirects=True, timeout=120) as r:
             r.raise_for_status()
@@ -126,7 +115,6 @@ def _storage_download_to_local(url: str, dest_path: str) -> bool:
 
 
 def _delete_local(path: str) -> None:
-    """Silently remove a local temp file."""
     try:
         os.remove(path)
     except OSError:
@@ -159,7 +147,6 @@ def _get_lecture_or_404(db, lecture_id: str, user_id: str) -> Lecture:
 router = APIRouter(prefix="/api", tags=["lectures"])
 
 
-# Pydantic models
 class LectureUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -182,9 +169,6 @@ async def create_lecture(
 ):
     try:
         with get_db() as db:
-            # Upsert user row — Lecture.user_id FK references users.id.
-            # Supabase users authenticate externally and never get a local row
-            # automatically, so PostgreSQL raises IntegrityError without this.
             existing_user = db.query(User).filter(User.id == user_id).first()
             if not existing_user:
                 db.add(User(id=user_id, created_at=datetime.utcnow()))
@@ -310,12 +294,12 @@ async def upload_audio(
     user_id: str = Depends(get_user_id),
 ):
     if not _is_allowed_audio(file.content_type):
-        raise HTTPException(status_code=400, detail=f"Unsupported audio type: {file.content_type}. Expected audio/webm, audio/wav, audio/ogg, audio/mpeg, or audio/mp4.")
+        raise HTTPException(status_code=400, detail=f"Unsupported audio type: {file.content_type}.")
 
-    ext          = (file.filename or "").rsplit(".", 1)[-1] or "webm"
-    safe_name    = f"lecture_{lecture_id}_{uuid.uuid4().hex}.{ext}"
-    local_path   = os.path.join(UPLOAD_DIR, safe_name)
-    object_name  = f"{user_id}/{safe_name}"
+    ext         = (file.filename or "").rsplit(".", 1)[-1] or "webm"
+    safe_name   = f"lecture_{lecture_id}_{uuid.uuid4().hex}.{ext}"
+    local_path  = os.path.join(UPLOAD_DIR, safe_name)
+    object_name = f"{user_id}/{safe_name}"
 
     try:
         with get_db() as db:
@@ -357,7 +341,7 @@ async def upload_document(
     user_id: str = Depends(get_user_id),
 ):
     if not _is_allowed_doc(file.content_type):
-        raise HTTPException(status_code=400, detail=f"Unsupported document type: {file.content_type}. Expected application/pdf or text/plain.")
+        raise HTTPException(status_code=400, detail=f"Unsupported document type: {file.content_type}.")
 
     safe_name  = f"doc_{uuid.uuid4().hex}.tmp"
     local_path = os.path.join(UPLOAD_DIR, safe_name)
@@ -411,13 +395,13 @@ async def upload_document(
 async def transcribe_lecture(
     request: Request,
     lecture_id: str,
-    model: str = "balanced",
+    model: str = "balanced",   # fast | balanced | accurate
     user_id: str = Depends(get_user_id),
 ):
     try:
         with get_db() as db:
             lecture = _get_lecture_or_404(db, lecture_id, user_id)
-            audio_url  = lecture.audio_url or ""
+            audio_url = lecture.audio_url or ""
 
         tmp_path_to_clean: str | None = None
 
@@ -437,17 +421,20 @@ async def transcribe_lecture(
                 raise HTTPException(status_code=400, detail="No audio file found — please upload audio first")
             local_path = os.path.join(UPLOAD_DIR, matching[-1])
 
-        _model_map = {"fast": "tiny", "balanced": "base", "accurate": "medium"}
+        # fast/balanced → Groq if GROQ_API_KEY set, falls back to local on failure
+        # accurate → always local Whisper (no API limits)
+        _model_map   = {"fast": "tiny", "balanced": "base", "accurate": "medium"}
         _whisper_size = _model_map.get(model, "base")
+        _force_local  = (model == "accurate")
 
-        def _transcription_service_for_model():
+        def _make_service():
             try:
                 from app.services.transcription_service import TranscriptionService
-                return TranscriptionService(model_size=_whisper_size)
+                return TranscriptionService(model_size=_whisper_size, force_local=_force_local)
             except ImportError:
                 return _get_transcription_service()
 
-        result = await run_in_threadpool(_transcription_service_for_model().transcribe, local_path)
+        result = await run_in_threadpool(_make_service().transcribe, local_path)
 
         if tmp_path_to_clean:
             _delete_local(tmp_path_to_clean)

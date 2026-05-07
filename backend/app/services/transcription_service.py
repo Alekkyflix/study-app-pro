@@ -1,85 +1,79 @@
 """
-Transcription service - Convert audio to text using Whisper
+Transcription service — Groq Whisper API (fast) or local faster-whisper (accurate).
+- fast/balanced: uses Groq if GROQ_API_KEY is set, otherwise falls back to local
+- accurate: always uses local faster-whisper (no size/rate limits)
 """
 import os
+import logging
 
-try:
-    from faster_whisper import WhisperModel
-    HAS_WHISPER = True
-except ImportError:
-    HAS_WHISPER = False
+logger = logging.getLogger(__name__)
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+
+_instance = None
 
 
 class TranscriptionService:
-    def __init__(self, model_size: str = "base"):
-        """Initialize Whisper model"""
-        if not HAS_WHISPER:
-            self.model = None
-            return
-        self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
+    def __init__(self, model_size: str = "base", force_local: bool = False):
+        self.model_size = model_size
+        self.use_groq = bool(GROQ_API_KEY) and not force_local
 
     def transcribe(self, audio_file_path: str, language: str = "en") -> dict:
-        """
-        Transcribe audio file to text
-        
-        Args:
-            audio_file_path: Path to audio file
-            language: Language code (e.g., 'en', 'es', 'fr')
-            
-        Returns:
-            dict with transcription text and metadata
-        """
-        if self.model is None:
+        if self.use_groq:
+            return self._transcribe_groq(audio_file_path)
+        return self._transcribe_local(audio_file_path, language)
+
+    def _transcribe_groq(self, audio_file_path: str) -> dict:
+        try:
+            from groq import Groq
+            client = Groq(api_key=GROQ_API_KEY)
+            with open(audio_file_path, "rb") as f:
+                result = client.audio.transcriptions.create(
+                    file=(os.path.basename(audio_file_path), f),
+                    model="whisper-large-v3-turbo",
+                    response_format="verbose_json",
+                )
             return {
                 "success": True,
-                "text": "[Mock Transcription] This is a simulated transcript. Install faster-whisper for real transcription.",
-                "duration": 45,
-                "language": language
+                "text": result.text,
+                "duration": getattr(result, "duration", 0),
+                "language": getattr(result, "language", "en"),
             }
-        
+        except Exception as e:
+            logger.error("Groq transcription failed, falling back to local: %s", e)
+            # Auto-fallback to local on Groq failure (rate limit, size limit, etc.)
+            return self._transcribe_local(audio_file_path)
+
+    def _transcribe_local(self, audio_file_path: str, language: str = "en") -> dict:
         try:
-            segments, info = self.model.transcribe(
+            from faster_whisper import WhisperModel
+            model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
+            segments, info = model.transcribe(
                 audio_file_path,
                 language=language,
                 beam_size=5,
             )
-
-            # Combine all segments into full text
-            full_text = " ".join([segment.text for segment in segments])
-            
-            # Get segment details
-            segment_list = [
-                {
-                    "start": segment.start,
-                    "end": segment.end,
-                    "text": segment.text,
-                    "confidence": segment.confidence,
-                }
-                for segment in segments
-            ]
-
+            full_text = " ".join([s.text for s in segments])
             return {
                 "success": True,
                 "text": full_text,
-                "segments": segment_list,
-                "language": info.language,
                 "duration": info.duration,
+                "language": info.language,
+            }
+        except ImportError:
+            return {
+                "success": True,
+                "text": "[Mock] Install faster-whisper or set GROQ_API_KEY for real transcription.",
+                "duration": 0,
+                "language": language,
             }
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "text": None,
-            }
+            logger.error("Local transcription failed: %s", e)
+            return {"success": False, "error": str(e), "text": None}
 
 
-# Global transcription service instance
-transcription_service = None
-
-
-def get_transcription_service():
-    """Get or create transcription service"""
-    global transcription_service
-    if transcription_service is None:
-        transcription_service = TranscriptionService()
-    return transcription_service
+def get_transcription_service() -> TranscriptionService:
+    global _instance
+    if _instance is None:
+        _instance = TranscriptionService()
+    return _instance
