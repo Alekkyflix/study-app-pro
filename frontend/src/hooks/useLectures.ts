@@ -1,4 +1,3 @@
-// useLectures hook for data fetching
 import { useState, useEffect } from "react";
 import { apiClient } from "../services/api";
 
@@ -8,7 +7,7 @@ export function useLectures() {
 
   useEffect(() => {
     apiClient.getLectures()
-      .then(setLectures)
+      .then((data) => setLectures(data?.lectures ?? []))
       .finally(() => setLoading(false));
   }, []);
 

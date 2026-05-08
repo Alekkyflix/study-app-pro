@@ -57,7 +57,9 @@ class ChatSession(Base):
     __tablename__ = "chat_sessions"
     
     id = Column(String, primary_key=True)
-    lecture_id = Column(String, ForeignKey("lectures.id"))
+    lecture_id = Column(String, ForeignKey("lectures.id"), index=True)
+    # user_id scopes sessions so two users cannot share chat history for the same lecture
+    user_id = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -108,7 +110,7 @@ class Analytics(Base):
     __tablename__ = "analytics"
     
     id = Column(String, primary_key=True)
-    lecture_id = Column(String, ForeignKey("lectures.id"))
+    lecture_id = Column(String, ForeignKey("lectures.id"), index=True)
     completion_rate = Column(Float)  # 0-1
     retention_score = Column(Float)  # 0-1
     exam_readiness = Column(Float)  # 0-1

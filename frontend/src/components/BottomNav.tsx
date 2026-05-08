@@ -9,7 +9,6 @@ export function BottomNav() {
   const navItems = [
     { path: "/dashboard", label: "Record", icon: Home },
     { path: "/library", label: "Library", icon: Library },
-    { path: "/chat", label: "Chat", icon: MessageSquare },
     { path: "/reports", label: "Reports", icon: BarChart3 },
     { path: "/analytics", label: "Analytics", icon: TrendingUp },
     { path: "/settings", label: "Settings", icon: Settings },

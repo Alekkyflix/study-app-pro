@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { BookOpen, Eye, EyeOff, Loader, Github } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 
 export function SignUp() {
   const [fullName, setFullName] = useState('');
@@ -12,26 +13,23 @@ export function SignUp() {
   const [institution, setInstitution] = useState('');
   const [termsConsent, setTermsConsent] = useState(false);
   const [recordingConsent, setRecordingConsent] = useState(false);
-
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [verifyEmailSent, setVerifyEmailSent] = useState(false);
 
+  const { showError, showSuccess } = useNotification();
   const navigate = useNavigate();
 
   const handleSignUp = async () => {
-    setError(null);
-
     // Validation
-    if (fullName.length < 2) return setError("Full name must be at least 2 characters");
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) return setError("Please enter a valid email address");
-    if (!phone.match(/^\+254\d{9}$/)) return setError("Phone must be in +254XXXXXXXXX format");
+    if (fullName.length < 2) return showError("Validation", "Full name must be at least 2 characters");
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) return showError("Validation", "Please enter a valid email address");
+    if (!phone.match(/^\+254\d{9}$/)) return showError("Validation", "Phone must be in +254XXXXXXXXX format");
     if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      return setError("Password must be at least 8 characters with 1 uppercase and 1 number");
+      return showError("Validation", "Password must be 8+ characters with 1 uppercase and 1 number");
     }
-    if (password !== confirmPassword) return setError("Passwords do not match");
-    if (!termsConsent || !recordingConsent) return setError("You must agree to all consents to proceed");
+    if (password !== confirmPassword) return showError("Validation", "Passwords do not match");
+    if (!termsConsent || !recordingConsent) return showError("Validation", "You must agree to all consents to proceed");
 
     setLoading(true);
     try {
@@ -43,34 +41,30 @@ export function SignUp() {
             full_name: fullName,
             phone: phone,
             institution: institution,
-            recording_consent: recordingConsent
-          }
-        }
+            recording_consent: recordingConsent,
+          },
+        },
       });
 
       if (error) {
         if (error.message.includes('already registered')) {
-          setError("This email is already registered. Try logging in instead.");
+          showError("Account Exists", "This email is already registered. Try logging in instead.");
         } else {
-          throw error;
+          showError("Sign Up Failed", error.message);
         }
       } else {
-        // If Supabase requires email confirmation, the user session is null
-        // and they must verify before they can log in.
         if (data.session) {
-          // Email confirmation is disabled — user is logged in immediately.
-          // Send them to consent (they're authenticated but haven't consented yet).
+          showSuccess("Welcome!", "Account created successfully.");
           navigate('/consent');
         } else {
-          // Email confirmation is ON — show "check your inbox" screen.
           setVerifyEmailSent(true);
         }
       }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes('rate limit')) {
-        setError("Too many sign-up attempts. Please wait an hour before trying again.");
+        showError("Too Many Attempts", "Please wait before trying again.");
       } else {
-        setError(err.message || "Failed to create account");
+        showError("Sign Up Failed", err.message || "Failed to create account");
       }
     } finally {
       setLoading(false);
@@ -81,7 +75,6 @@ export function SignUp() {
     await supabase.auth.signInWithOAuth({ provider });
   };
 
-  // Email verification sent — show confirmation screen
   if (verifyEmailSent) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 text-gray-900">
@@ -115,16 +108,10 @@ export function SignUp() {
         </div>
         <h2 className="text-2xl font-extrabold tracking-tighter text-center mb-8">Create your account</h2>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium border border-red-100">
-            {error}
-          </div>
-        )}
-
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Full Name</label>
-            <input 
+            <input
               type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium"
               placeholder="John Doe"
@@ -133,7 +120,7 @@ export function SignUp() {
 
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Email Address</label>
-            <input 
+            <input
               type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium"
               placeholder="you@university.ac.ke"
@@ -142,7 +129,7 @@ export function SignUp() {
 
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Phone Number</label>
-            <input 
+            <input
               type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium"
               placeholder="+254700000000"
@@ -151,12 +138,9 @@ export function SignUp() {
 
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Institution (Optional)</label>
-            <select 
-              value={institution && ["University of Nairobi", "Meru University", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University"].includes(institution) ? institution : (institution ? "Other" : "")} 
-              onChange={(e) => {
-                const val = e.target.value;
-                setInstitution(val === "Other" ? "" : val);
-              }}
+            <select
+              value={institution}
+              onChange={(e) => setInstitution(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium text-sm"
             >
               <option value="">Select your university</option>
@@ -166,17 +150,14 @@ export function SignUp() {
               <option value="Strathmore University">Strathmore University</option>
               <option value="JKUAT">JKUAT</option>
               <option value="Moi University">Moi University</option>
-              <option value="Meru University">Meru University</option>
-              <option value="Other">Other (Type manually)</option>
+              <option value="Other">Other</option>
             </select>
 
-            {/* Manual Entry Field */}
-            {(!institution || !["University of Nairobi", "Kenyatta University", "Strathmore University", "JKUAT", "Moi University", "Meru University"].includes(institution)) && (
-              <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                <input 
-                  type="text" 
+            {institution === "Other" && (
+              <div className="mt-2">
+                <input
+                  type="text"
                   placeholder="Type university name..."
-                  value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium text-sm shadow-sm"
                 />
@@ -186,7 +167,7 @@ export function SignUp() {
 
           <div className="relative">
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Password</label>
-            <input 
+            <input
               type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium pr-12"
               placeholder="••••••••"
@@ -204,7 +185,7 @@ export function SignUp() {
 
           <div>
             <label className="block text-xs font-bold tracking-wide uppercase text-gray-500 mb-1 ml-1">Confirm Password</label>
-            <input 
+            <input
               type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all font-medium pr-12"
               placeholder="••••••••"
@@ -213,14 +194,14 @@ export function SignUp() {
 
           <div className="mt-6 space-y-3 pt-4 border-t border-gray-100">
             <label className="flex items-start gap-3 cursor-pointer">
-              <input 
+              <input
                 type="checkbox" checked={termsConsent} onChange={(e) => setTermsConsent(e.target.checked)}
                 className="mt-0.5 w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
               />
               <span className="text-sm font-medium text-gray-600">I agree to the Terms of Service and Privacy Policy</span>
             </label>
             <label className="flex items-start gap-3 cursor-pointer">
-              <input 
+              <input
                 type="checkbox" checked={recordingConsent} onChange={(e) => setRecordingConsent(e.target.checked)}
                 className="mt-0.5 w-4 h-4 text-gray-900 focus:ring-gray-900 rounded"
               />
@@ -228,7 +209,7 @@ export function SignUp() {
             </label>
           </div>
 
-          <button 
+          <button
             type="button" onClick={handleSignUp} disabled={loading}
             className="w-full mt-6 py-4 bg-gray-900 text-white rounded-2xl font-bold tracking-tight hover:bg-black transition-all disabled:opacity-70 flex justify-center items-center"
           >
@@ -243,7 +224,7 @@ export function SignUp() {
         </div>
 
         <div className="mt-8 space-y-4">
-          <button 
+          <button
             type="button"
             onClick={() => handleOAuth('google')}
             className="w-full py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-700 hover:bg-gray-50 transition-all flex justify-center items-center gap-3"
@@ -252,7 +233,7 @@ export function SignUp() {
             Google
           </button>
 
-          <button 
+          <button
             type="button"
             onClick={() => handleOAuth('github')}
             className="w-full py-4 bg-[#24292e] border border-[#24292e] rounded-2xl font-bold text-white hover:bg-black transition-all flex justify-center items-center gap-3"

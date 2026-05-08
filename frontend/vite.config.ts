@@ -64,5 +64,25 @@ export default defineConfig({
         changeOrigin: true
       }
     }
-  }
+  },
+  build: {
+    // Raise the warning threshold — vendor chunks like framer-motion are legitimately large
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime — tiny, changes rarely, great cache hit rate
+          'vendor-react': ['react', 'react-dom'],
+          // Router — separate so a page change doesn't bust the React chunk
+          'vendor-router': ['react-router-dom'],
+          // Animation library — largest single dep, isolate it
+          'vendor-framer': ['framer-motion'],
+          // Supabase auth client
+          'vendor-supabase': ['@supabase/supabase-js'],
+          // Icon library — large but only what's imported (tree-shaken)
+          'vendor-icons': ['lucide-react'],
+        },
+      },
+    },
+  },
 });

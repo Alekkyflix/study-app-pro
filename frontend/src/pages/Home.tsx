@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { Upload, Save, Mic, FileText, MessageSquare, DownloadCloud, Loader, FileUp } from "lucide-react";
+import { Upload, Save, Mic, FileText, MessageSquare, DownloadCloud, Loader, FileUp, AlertTriangle, RefreshCw } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { RecordingInterface } from "../components/RecordingInterface";
 import { Waveform } from "../components/Waveform";
 import { ChatPanel } from "../components/ChatPanel";
 import { ReportPanel } from "../components/ReportPanel";
-import { apiClient } from "../services/api";
+import { apiClient, checkWifiOnly } from "../services/api";
 import { useNotification } from "../context/NotificationContext";
+import { useSettings } from "../context/SettingsContext";
 import { EmptyState, InlineLoader, RecordingIndicator, OnboardingTooltip } from "../components/notifications";
 
 export function Home() {
@@ -16,6 +17,7 @@ export function Home() {
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const { showSuccess, showError, showWarning, showInfo, showConsent, setLoading: setGlobalLoading } = useNotification();
+  const { settings } = useSettings();
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,14 @@ export function Home() {
     setShowTooltip(false);
     localStorage.setItem("studypro_tutorial_done", "true");
   };
+
+  // Implement auto-stop using settings
+  useEffect(() => {
+    if (isRecording && settings.autoStop && duration >= settings.autoStopDuration * 60) {
+      showInfo("Auto-Stopped", `Recording reached the ${settings.autoStopDuration} minute limit.`);
+      handleStop();
+    }
+  }, [duration, isRecording, settings.autoStop, settings.autoStopDuration]);
   
   // State for managing lecture after saving
   const [currentLectureId, setCurrentLectureId] = useState<string | null>(null);
@@ -38,6 +48,10 @@ export function Home() {
   const [summary, setSummary] = useState<string>("");
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [showReportPanel, setShowReportPanel] = useState(false);
+  // saveError: holds error message when save partially failed (audio blob is still kept)
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Tracks a lecture already created in DB so retry uploads to the same ID, not a new one
+  const pendingLectureIdRef = useRef<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -46,6 +60,12 @@ export function Home() {
   const timerRef = useRef<number>();
   const audioInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  // Stores the currently playing Audio element so we can stop it programmatically
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  // Wake Lock sentinel — keeps the screen on during recording
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  // Whether the tab went to background during an active recording
+  const [tabHiddenDuringRecording, setTabHiddenDuringRecording] = useState(false);
 
   // Initialize audio context on first user interaction
   const initAudioContext = async () => {
@@ -54,6 +74,47 @@ export function Home() {
         (window as any).webkitAudioContext)();
     }
   };
+
+  // Acquire screen Wake Lock — prevents mobile from sleeping during recording
+  const acquireWakeLock = async () => {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      } catch {
+        // Wake Lock denied (e.g. low battery mode) — non-fatal, just log
+        console.warn('[StudyPro] Screen Wake Lock could not be acquired.');
+      }
+    }
+  };
+
+  // Release Wake Lock — called when recording stops or component unmounts
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+  };
+
+  // Page Visibility listener — warn user if they switch tabs while recording
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isRecording) {
+        setTabHiddenDuringRecording(true);
+        showWarning(
+          'Recording Active',
+          'Switching tabs on mobile may stop your recording. Keep this tab open.',
+        );
+      }
+      if (!document.hidden) {
+        setTabHiddenDuringRecording(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRecording]);
+
+  // Release wake lock when component unmounts (safety net)
+  useEffect(() => () => releaseWakeLock(), []);
 
   const handleRecord = async () => {
     showConsent(async () => {
@@ -77,8 +138,16 @@ export function Home() {
         source.connect(analyser);
         analyserRef.current = analyser;
 
+        // --- Wire audioQuality setting to MediaRecorder bitrate ---
+        const bitrateMap: Record<string, number> = {
+          low: 32_000,
+          standard: 64_000,
+          high: 128_000,
+        };
+        const audioBitsPerSecond = bitrateMap[settings.audioQuality] ?? 64_000;
+
         // Setup media recorder
-        const mediaRecorder = new MediaRecorder(stream);
+        const mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond });
         const chunks: BlobPart[] = [];
 
         mediaRecorder.ondataavailable = (event) => {
@@ -94,6 +163,9 @@ export function Home() {
         mediaRecorder.start();
         mediaRecorderRef.current = mediaRecorder;
 
+        // Acquire Wake Lock so the screen stays on during recording
+        await acquireWakeLock();
+
         setIsRecording(true);
         setDuration(0);
 
@@ -105,7 +177,7 @@ export function Home() {
         console.error("Error accessing microphone:", error);
         showError("Microphone Access Failed", "Unable to access microphone. Please check permissions.");
       }
-    });
+    }, settings.consentReminder);
   };
 
   const handleStop = () => {
@@ -121,17 +193,41 @@ export function Home() {
       clearInterval(timerRef.current);
     }
 
+    // Release Wake Lock when recording ends
+    releaseWakeLock();
+    setTabHiddenDuringRecording(false);
     setIsRecording(false);
+  };
+
+  // Stop and clean up any currently playing audio preview
+  const stopAudio = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.src = "";   // releases the object URL hold
+      audioPlayerRef.current = null;
+    }
+    setIsPlaying(false);
   };
 
   const handlePlay = () => {
     if (!audioBlob) return;
 
+    // If already playing, stop it (toggle)
+    if (audioPlayerRef.current) {
+      stopAudio();
+      return;
+    }
+
     const url = URL.createObjectURL(audioBlob);
     const audio = new Audio(url);
+    audioPlayerRef.current = audio;
 
     audio.onplay = () => setIsPlaying(true);
-    audio.onended = () => setIsPlaying(false);
+    audio.onended = () => {
+      URL.revokeObjectURL(url);   // free memory once done
+      audioPlayerRef.current = null;
+      setIsPlaying(false);
+    };
     audio.onpause = () => setIsPlaying(false);
 
     audio.play();
@@ -149,19 +245,31 @@ export function Home() {
     }
 
     try {
-      setLoading(true);
-      setGlobalLoading(true, "Saving your lecture...");
-      setStatus("Creating lecture...");
+      // Stop any audio preview before saving
+      stopAudio();
 
-      // Step 1: Create lecture entry
-      const lectureRes = await apiClient.createLecture(lectureTitle);
-      if (!lectureRes.success) {
-        throw new Error(lectureRes.error || "Failed to create lecture");
+      // --- WiFi-only guard ---
+      if (!checkWifiOnly(settings.wifiOnly)) {
+        showWarning('WiFi Only', 'You are on mobile data. Disable "WiFi Only" in Settings to upload on cellular.');
+        return;
       }
 
-      const lectureId = lectureRes.lecture_id.toString();
-      setCurrentLectureId(lectureId);
-      
+      setSaveError(null);
+      setLoading(true);
+      setGlobalLoading(true, "Saving your lecture...");
+
+      // Step 1: Create lecture entry — skip if we already have one from a previous failed attempt
+      if (!pendingLectureIdRef.current) {
+        setStatus("Creating lecture...");
+        const lectureRes = await apiClient.createLecture(lectureTitle);
+        if (!lectureRes.success) {
+          throw new Error(lectureRes.error || "Failed to create lecture");
+        }
+        pendingLectureIdRef.current = lectureRes.lecture_id.toString();
+      }
+
+      const lectureId = pendingLectureIdRef.current!;
+
       // Step 2: Upload audio
       setStatus("Uploading audio...");
       const uploadRes = await apiClient.uploadAudio(lectureId, audioBlob);
@@ -169,20 +277,37 @@ export function Home() {
         throw new Error(uploadRes.error || "Failed to upload audio");
       }
 
+      // Both steps succeeded — commit state
+      pendingLectureIdRef.current = null;
+      setCurrentLectureId(lectureId);
       showSuccess("Lecture Saved", "Your lecture has been saved successfully");
       setStatus("✅ Lecture saved! Ready for transcription.");
       setDuration(0);
       setAudioBlob(null);
+
+      // Auto transcribe if enabled
+      if (settings.autoTranscribe) {
+        await handleTranscribe(lectureId);
+      }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Failed to save lecture";
       console.error("Error saving lecture:", error);
-      setStatus(`❌ ${error instanceof Error ? error.message : "Failed to save"}`);
-      showError("Save Failed", error instanceof Error ? error.message : "Failed to save lecture", {
-        retry: handleSave
-      });
+      setStatus("");
+      // Keep audioBlob intact so the user can retry or discard manually
+      setSaveError(msg);
     } finally {
       setLoading(false);
       setGlobalLoading(false);
     }
+  };
+
+  const handleDiscardRecording = () => {
+    stopAudio();  // stop preview if playing
+    setAudioBlob(null);
+    setSaveError(null);
+    pendingLectureIdRef.current = null;
+    setStatus("");
+    setDuration(0);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isDocument: boolean) => {
@@ -209,13 +334,21 @@ export function Home() {
         if (!uploadRes.success) throw new Error(uploadRes.error || "Failed to parse document");
         showSuccess("Document Uploaded", "Document parsed successfully!");
         setStatus("✅ Document parsed! Ready for summarization.");
-        setTranscript(titleToUse + " document parsed via PDF/TXT parser successfully.");
+        const parsedText = titleToUse + " document parsed via PDF/TXT parser successfully.";
+        setTranscript(parsedText);
+        if (settings.autoSummarize) {
+          await handleSummarize(lectureId, parsedText);
+        }
       } else {
         setStatus("Uploading audio...");
         const uploadRes = await apiClient.uploadAudio(lectureId, file);
         if (!uploadRes.success) throw new Error(uploadRes.error || "Failed to upload audio");
         showSuccess("Audio Uploaded", "Audio uploaded successfully!");
         setStatus("✅ Audio uploaded! Ready for transcription.");
+        
+        if (settings.autoTranscribe) {
+          await handleTranscribe(lectureId);
+        }
       }
       
     } catch (error) {
@@ -229,8 +362,10 @@ export function Home() {
     }
   };
 
-  const handleTranscribe = async () => {
-    if (!currentLectureId) {
+  const handleTranscribe = async (idToTranscribe?: string | React.MouseEvent) => {
+    const targetId = typeof idToTranscribe === 'string' ? idToTranscribe : currentLectureId;
+    
+    if (!targetId) {
       showWarning("Save Required", "Please save a lecture first");
       return;
     }
@@ -239,7 +374,7 @@ export function Home() {
       setLoading(true);
       setStatus("🎤 Transcribing audio...");
 
-      const result = await apiClient.transcribeLecture(currentLectureId);
+      const result = await apiClient.transcribeLecture(targetId, settings.transcriptionModel);
       if (!result.success) {
         throw new Error(result.error || "Transcription failed");
       }
@@ -247,6 +382,10 @@ export function Home() {
       setTranscript(result.transcript || "");
       showSuccess("Transcription Complete", "Your lecture is ready to review");
       setStatus("✅ Transcription complete!");
+
+      if (settings.autoSummarize) {
+        await handleSummarize(targetId, result.transcript);
+      }
     } catch (error) {
       console.error("Error transcribing:", error);
       showError("Transcription Failed", error instanceof Error ? error.message : "Could not process audio");
@@ -256,13 +395,16 @@ export function Home() {
     }
   };
 
-  const handleSummarize = async () => {
-    if (!currentLectureId) {
+  const handleSummarize = async (idToSummarize?: string | React.MouseEvent, currentTranscript?: string) => {
+    const targetId = typeof idToSummarize === 'string' ? idToSummarize : currentLectureId;
+    const targetTranscript = typeof currentTranscript === 'string' ? currentTranscript : transcript;
+
+    if (!targetId) {
       showWarning("Save Required", "Please save a lecture first");
       return;
     }
 
-    if (!transcript) {
+    if (!targetTranscript) {
       showWarning("Transcript Required", "Please transcribe the lecture first");
       return;
     }
@@ -271,7 +413,7 @@ export function Home() {
       setLoading(true);
       setStatus("📝 Generating summary...");
 
-      const result = await apiClient.summarizeLecture(currentLectureId);
+      const result = await apiClient.summarizeLecture(targetId, settings.summaryType);
       if (!result.success) {
         throw new Error(result.error || "Summarization failed");
       }
@@ -374,22 +516,45 @@ export function Home() {
             }}
             onStop={handleStop}
             onPlay={handlePlay}
-            onPause={() => setIsPlaying(false)}
+            onPause={stopAudio}
             isPlaying={isPlaying}
             duration={duration}
           />
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — shown when recording done but not yet saved */}
         {audioBlob && !currentLectureId && (
           <div className="space-y-3">
+            {/* Inline save error banner — persistent, not a toast */}
+            {saveError && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-red-800">Save Failed</p>
+                  <p className="text-xs text-red-600 mt-0.5 break-words">{saveError}</p>
+                  {pendingLectureIdRef.current && (
+                    <p className="text-xs text-red-500 mt-1">Lecture entry was created — retry will upload to the same entry.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleSave}
               disabled={loading}
               className="btn-primary w-full py-4 text-lg"
             >
-              {loading ? <InlineLoader /> : <Save className="w-5 h-5" />}
-              {loading ? "" : "Save Lecture"}
+              {loading ? <InlineLoader /> : saveError ? <RefreshCw className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+              {loading ? "" : saveError ? "Retry Save" : "Save Lecture"}
+            </button>
+
+            {/* Discard button only shown when there's an error or audio is ready */}
+            <button
+              onClick={handleDiscardRecording}
+              disabled={loading}
+              className="w-full py-3 text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Discard Recording
             </button>
           </div>
         )}

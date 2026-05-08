@@ -75,6 +75,77 @@ export function Settings() {
     });
   };
 
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    try {
+      const { supabase: sb } = await import('../lib/supabase');
+      const { error } = await sb.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      showSuccess("Link Sent", "Check your inbox for a password reset link.");
+    } catch {
+      showError("Failed", "Could not send password reset email.");
+    }
+  };
+
+  // Wire studyReminders toggle to Push Notification API
+  const handleStudyRemindersToggle = async (enabled: boolean) => {
+    if (!enabled) {
+      updateSetting('studyReminders', false);
+      return;
+    }
+    if (!('Notification' in window)) {
+      showInfo('Not Supported', 'Push notifications are not supported in your browser.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      updateSetting('studyReminders', true);
+      showSuccess('Reminders Enabled', 'You will receive study reminders via push notification.');
+    } else {
+      showError(
+        'Permission Denied',
+        'Please allow notifications in your browser settings to enable study reminders.',
+      );
+      // Do not flip the toggle on — permission was denied
+    }
+  };
+
+  const handleExportData = async () => {
+    showInfo('Export Started', 'Compiling your data archive...');
+    try {
+      const { apiClient } = await import('../services/api');
+      const res = await apiClient.getLectures();
+      if (!res.success) throw new Error("Could not fetch lectures");
+      
+      const fullData = await Promise.all((res.lectures || []).map(async (l: any) => {
+         const detail = await apiClient.getLecture(l.id);
+         return detail.lecture;
+      }));
+      
+      const exportObject = {
+         profile,
+         settings,
+         lectures: fullData
+      };
+      
+      const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `studypro_data_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showSuccess('Export Complete', 'Your data archive has been downloaded.');
+    } catch {
+      showError('Export Failed', 'Could not compile your data archive.');
+    }
+  };
+
   const accentColors: { name: AccentColor; hex: string }[] = [
     { name: 'blue', hex: '#3b82f6' },
     { name: 'green', hex: '#10b981' },
@@ -118,7 +189,7 @@ export function Settings() {
           <SettingRow
             icon={Key}
             label="Change Password"
-            onClick={() => showInfo('Password Reset', 'Redirecting to secure password reset flow...')}
+            onClick={handleChangePassword}
           />
           <SettingRow
             icon={ShieldCheck}
@@ -275,12 +346,13 @@ export function Settings() {
           <SettingRow
             icon={Monitor}
             label="AI Provider"
+            description="Currently only Google Gemini is active"
             type="select"
             value={settings.aiProvider}
             options={[
               { label: 'Google Gemini', value: 'gemini' },
-              { label: 'OpenAI GPT', value: 'openai' },
-              { label: 'Anthropic Claude', value: 'claude' }
+              { label: 'OpenAI GPT (coming soon)', value: 'openai' },
+              { label: 'Anthropic Claude (coming soon)', value: 'claude' }
             ]}
             onChange={(v) => updateSetting('aiProvider', v)}
           />
@@ -321,7 +393,7 @@ export function Settings() {
             label="Study Reminders"
             type="toggle"
             value={settings.studyReminders}
-            onChange={(v) => updateSetting('studyReminders', v)}
+            onChange={handleStudyRemindersToggle}
           />
         </SettingSection>
 
@@ -346,7 +418,7 @@ export function Settings() {
           <SettingRow
             icon={Trash2}
             label="Export All My Data"
-            onClick={() => showInfo('Export', 'Preparing your data archive...')}
+            onClick={handleExportData}
           />
           <SettingRow
             icon={Trash2}
@@ -362,7 +434,8 @@ export function Settings() {
           <SettingRow
             icon={MessageSquare}
             label="Join Community (WhatsApp)"
-            onClick={() => window.open('https://whatsapp.com', '_blank')}
+            description="Group link coming soon"
+            onClick={() => showInfo('Coming Soon', 'Our WhatsApp study group link will be added here soon.')}
           />
           <SettingRow icon={HelpCircle} label="Built with ❤️ in Kenya 🇰🇪" disabled />
         </SettingSection>

@@ -151,7 +151,7 @@ Transcript:
 
             try:
                 concepts = json.loads(response.text)
-            except:
+            except (json.JSONDecodeError, ValueError):
                 concepts = [{"name": "Concept", "description": response.text}]
 
             return {

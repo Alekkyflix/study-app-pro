@@ -8,7 +8,6 @@ import { PublicRoute } from "./components/PublicRoute";
 
 import { Home } from "./pages/Home";
 import { Library } from "./pages/Library";
-import { Chat } from "./pages/Chat";
 import { Reports } from "./pages/Reports";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
@@ -64,7 +63,7 @@ function App() {
                 <Route element={<MainLayout />}>
                   <Route path="/dashboard" element={<Home />} />
                   <Route path="/library" element={<Library />} />
-                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/chat" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/settings" element={<Settings />} />

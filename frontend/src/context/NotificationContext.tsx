@@ -13,6 +13,7 @@ export interface Toast {
   title: string;
   message: string;
   retry?: () => void;
+  duration: number;  // ms — used by the progress bar
 }
 
 export interface ModalOptions {
@@ -39,7 +40,7 @@ interface NotificationContextType {
   showModal: (options: ModalOptions) => void;
   showMiniToast: (message: string) => void;
   setLoading: (isLoading: boolean, message?: string, progress?: number) => void;
-  showConsent: (onConfirm: () => void) => void;
+  showConsent: (onConfirm: () => void, mode?: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -57,15 +58,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const addToast = useCallback((type: NotificationType, title: string, message: string, retry?: () => void) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const newToast = { id, type, title, message, retry };
+    // Errors with retry get 8 s so the user has time to act; everything else 5 s
+    const duration = (type === 'error' && retry) ? 8000 : 5000;
+    const newToast: Toast = { id, type, title, message, retry, duration };
     setToasts((prev) => [...prev, newToast]);
-
-    // Auto dismiss
-    const duration = type === 'error' ? 6000 : 3000;
-    // Error with retry stays until dismissed manually, otherwise auto-dismiss
-    if (!retry) {
-      setTimeout(() => removeToast(id), duration);
-    }
+    // Always auto-dismiss — no toast stays on screen indefinitely
+    setTimeout(() => removeToast(id), duration);
   }, [removeToast]);
 
   const showSuccess = useCallback((title: string, message: string) => {
@@ -86,7 +84,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const showMiniToast = useCallback((message: string) => {
     const id = Math.random().toString(36).substring(2, 9);
-    const newToast: Toast = { id, type: 'success', title: '', message };
+    const newToast: Toast = { id, type: 'success', title: '', message, duration: 1200 };
     setToasts((prev) => [...prev, newToast]);
     setTimeout(() => removeToast(id), 1200);
   }, [removeToast]);
@@ -99,9 +97,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     setLoadingState({ isLoading, message, progress });
   }, []);
 
-  const showConsent = useCallback((onConfirm: () => void) => {
+  const showConsent = useCallback((onConfirm: () => void, mode = 'always') => {
+    if (mode === 'never') {
+      onConfirm();
+      return;
+    }
     const consentCount = parseInt(localStorage.getItem('studypro_consent_count') || '0');
-    if (consentCount < 3) {
+    if (mode === 'always' || (mode === '3_times' && consentCount < 3)) {
       setOnConsentConfirm(() => onConfirm);
       setConsentVisible(true);
     } else {
