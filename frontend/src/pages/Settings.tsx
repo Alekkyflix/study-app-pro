@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings, AccentColor } from '../context/SettingsContext';
 import { useNotification } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-
+import { motion } from 'framer-motion';
 import ProfileCard from '../components/settings/ProfileCard';
 import SettingSection from '../components/settings/SettingSection';
 import SettingRow from '../components/settings/SettingRow';
@@ -216,18 +216,28 @@ export function Settings() {
                 {settings.fontSize}
               </span>
             </div>
-            <input
-              type="range" min="0" max="3" step="1"
-              value={['small', 'default', 'large', 'extra-large'].indexOf(settings.fontSize)}
-              onChange={(e) => {
-                const sizes = ['small', 'default', 'large', 'extra-large'] as const;
-                updateSetting('fontSize', sizes[parseInt(e.target.value)]);
-              }}
-              className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-primary"
-            />
-            <div className="flex justify-between mt-2 px-1">
-              <span className="text-[10px] font-bold text-gray-300">A</span>
-              <span className="text-[20px] font-bold text-gray-300">A</span>
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-1 rounded-2xl flex relative h-12">
+              <motion.div 
+                className="absolute top-1 bottom-1 bg-white dark:bg-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600"
+                initial={false}
+                animate={{
+                  left: `${['small', 'default', 'large', 'extra-large'].indexOf(settings.fontSize) * 25}%`,
+                  width: '25%'
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              />
+              {(['small', 'default', 'large', 'extra-large'] as const).map((size, index) => (
+                <button
+                  key={size}
+                  onClick={() => updateSetting('fontSize', size)}
+                  className={`flex-1 relative z-10 font-bold transition-colors text-sm flex items-center justify-center ${
+                    settings.fontSize === size ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {/* Visual size indicator */}
+                  <span style={{ fontSize: `${0.8 + index * 0.15}rem` }}>A</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -239,6 +249,9 @@ export function Settings() {
             options={[
               { label: 'English',   value: 'english' },
               { label: 'Kiswahili', value: 'swahili' },
+              { label: 'Français',  value: 'french' },
+              { label: 'Español',   value: 'spanish' },
+              { label: 'Deutsch',   value: 'german' },
             ]}
             onChange={(val) => updateSetting('language', val)}
           />
