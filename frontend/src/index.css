@@ -1,3 +1,5 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
 /* ── Light theme (default) ─────────────────────────────────── */
 :root {
   --s-bg:        #F2F2F7;
