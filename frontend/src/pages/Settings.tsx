@@ -13,6 +13,7 @@ import ProfileCard from '../components/settings/ProfileCard';
 import SettingSection from '../components/settings/SettingSection';
 import SettingRow from '../components/settings/SettingRow';
 import EditProfileModal from '../components/settings/EditProfileModal';
+import { useTranslation } from '../lib/i18n';
 
 const ACCENT_COLORS: { name: AccentColor; hex: string }[] = [
   { name: 'blue',   hex: '#3b82f6' },
@@ -31,6 +32,7 @@ export function Settings() {
   const { settings, profile, updateSetting, updateProfile, loading: settingsLoading } = useSettings();
   const { showModal, showSuccess, showError, showInfo } = useNotification();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const { t } = useTranslation(settings?.language);
 
   // NOTE: Theme is already applied by SettingsContext, no need to duplicate here
 
@@ -152,8 +154,8 @@ export function Settings() {
             <ChevronRight className="w-5 h-5 text-gray-900 dark:text-white rotate-180" />
           </button>
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900 dark:text-white">Settings</h1>
-            <p className="text-gray-500 font-medium italic">Your study buddy, your rules.</p>
+            <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900 dark:text-white">{t('settings')}</h1>
+            <p className="text-gray-500 font-medium italic">{t('subtitle')}</p>
           </div>
         </div>
 
@@ -169,16 +171,16 @@ export function Settings() {
         />
 
         {/* Account */}
-        <SettingSection title="Account">
-          <SettingRow icon={Key} label="Change Password" onClick={handleChangePassword} />
-          <SettingRow icon={ShieldCheck} label="Email Verification" value="Verified" disabled />
-          <SettingRow icon={LogOut} label="Sign Out" type="danger" onClick={handleSignOut} />
+        <SettingSection title={t('account')}>
+          <SettingRow icon={Key} label={t('changePassword')} onClick={handleChangePassword} />
+          <SettingRow icon={ShieldCheck} label={t('emailVerification')} value="Verified" disabled />
+          <SettingRow icon={LogOut} label={t('signOut')} type="danger" onClick={handleSignOut} />
         </SettingSection>
 
         {/* Appearance */}
-        <SettingSection title="Appearance">
+        <SettingSection title={t('appearance')}>
           <div className="p-4 bg-gray-50/20">
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 ml-1">Accent Color</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 ml-1">{t('accentColor')}</p>
             <div className="flex items-center justify-between px-2">
               {ACCENT_COLORS.map((color) => (
                 <button
@@ -195,13 +197,13 @@ export function Settings() {
           {/* Theme */}
           <SettingRow
             icon={settings.theme === 'dark' ? Moon : settings.theme === 'light' ? Sun : Monitor}
-            label="Theme"
+            label={t('theme')}
             type="select"
             value={settings.theme}
             options={[
-              { label: 'Light', value: 'light' },
-              { label: 'Dark',  value: 'dark'  },
-              { label: 'System', value: 'system' },
+              { label: t('light'), value: 'light' },
+              { label: t('dark'),  value: 'dark'  },
+              { label: t('system'), value: 'system' },
             ]}
             onChange={(val) => updateSetting('theme', val)}
           />
@@ -211,7 +213,7 @@ export function Settings() {
               <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
                 <Type className="w-5 h-5" />
               </div>
-              <p className="font-bold text-gray-900 dark:text-white flex-1">Font Size</p>
+              <p className="font-bold text-gray-900 dark:text-white flex-1">{t('fontSize')}</p>
               <span className="text-xs font-black uppercase bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md text-gray-500 dark:text-gray-400">
                 {settings.fontSize}
               </span>
@@ -243,7 +245,7 @@ export function Settings() {
 
           <SettingRow
             icon={Globe}
-            label="App Language"
+            label={t('appLanguage')}
             type="select"
             value={settings.language}
             options={[
@@ -258,10 +260,10 @@ export function Settings() {
         </SettingSection>
 
         {/* Recording */}
-        <SettingSection title="Recording">
+        <SettingSection title={t('recording')}>
           <SettingRow
             icon={Volume2}
-            label="Audio Quality"
+            label={t('audioQuality')}
             description={
               settings.audioQuality === 'low' ? '~28 MB/hr'
               : settings.audioQuality === 'standard' ? '~56 MB/hr'
@@ -270,39 +272,38 @@ export function Settings() {
             type="select"
             value={settings.audioQuality}
             options={[
-              { label: 'Low',      value: 'low'      },
-              { label: 'Standard', value: 'standard' },
-              { label: 'High',     value: 'high'     },
+              { label: t('low'),      value: 'low'      },
+              { label: t('standard'), value: 'standard' },
+              { label: t('high'),     value: 'high'     },
             ]}
             onChange={(val) => updateSetting('audioQuality', val)}
           />
           <SettingRow
             icon={Clock}
-            label="Auto-Stop Recording"
+            label={t('autoStopRecording')}
             type="toggle"
             value={settings.autoStop}
             onChange={(v) => updateSetting('autoStop', v)}
           />
           <SettingRow
             icon={ShieldCheck}
-            label="Consent Reminder"
-            description="Required by Kenyan law"
+            label={t('consentReminder')}
             type="select"
             value={settings.consentReminder}
             options={[
-              { label: 'Always',       value: 'always'  },
-              { label: 'First 3 Times', value: '3_times' },
-              { label: 'Never',        value: 'never'   },
+              { label: t('always'),       value: 'always'  },
+              { label: t('first3Times'), value: '3_times' },
+              { label: t('never'),        value: 'never'   },
             ]}
             onChange={(v) => updateSetting('consentReminder', v)}
           />
         </SettingSection>
 
         {/* Transcription */}
-        <SettingSection title="Transcription">
+        <SettingSection title={t('transcription')}>
           <SettingRow
             icon={Cpu}
-            label="AI Model"
+            label={t('aiModel')}
             description={
               settings.transcriptionModel === 'fast' ? 'Groq cloud · ~2s'
               : settings.transcriptionModel === 'balanced' ? 'Groq → local fallback'
@@ -311,24 +312,22 @@ export function Settings() {
             type="select"
             value={settings.transcriptionModel}
             options={[
-              { label: 'Fast',     value: 'fast'     },
-              { label: 'Balanced', value: 'balanced' },
-              { label: 'Accurate', value: 'accurate' },
+              { label: t('fast'),     value: 'fast'     },
+              { label: t('balanced'), value: 'balanced' },
+              { label: t('accurate'), value: 'accurate' },
             ]}
             onChange={(v) => updateSetting('transcriptionModel', v)}
           />
           <SettingRow
             icon={Sparkles}
-            label="Auto-Transcribe"
-            description="Start after recording stops"
+            label={t('autoTranscribe')}
             type="toggle"
             value={settings.autoTranscribe}
             onChange={(v) => updateSetting('autoTranscribe', v)}
           />
           <SettingRow
             icon={User}
-            label="Speaker Detection"
-            description="Identify multiple speakers"
+            label={t('speakerDetection')}
             type="toggle"
             value={settings.speakerDetection}
             onChange={(v) => updateSetting('speakerDetection', v)}
@@ -336,11 +335,10 @@ export function Settings() {
         </SettingSection>
 
         {/* AI & Summarization */}
-        <SettingSection title="AI & Summarization">
+        <SettingSection title={t('aiSummarization')}>
           <SettingRow
             icon={Monitor}
-            label="AI Provider"
-            description="Currently only Google Gemini is active"
+            label={t('aiProvider')}
             type="select"
             value={settings.aiProvider}
             options={[
@@ -352,21 +350,20 @@ export function Settings() {
           />
           <SettingRow
             icon={Sparkles}
-            label="Summary Type"
+            label={t('summaryType')}
             type="select"
             value={settings.summaryType}
             options={[
-              { label: 'Executive',    value: 'executive'   },
-              { label: 'Detailed',     value: 'detailed'    },
-              { label: 'Bullet Points', value: 'bullet'     },
-              { label: 'Study Guide',  value: 'study_guide' },
+              { label: t('executive'),    value: 'executive'   },
+              { label: t('detailed'),     value: 'detailed'    },
+              { label: t('bulletPoints'), value: 'bullet'     },
+              { label: t('studyGuide'),  value: 'study_guide' },
             ]}
             onChange={(v) => updateSetting('summaryType', v)}
           />
           <SettingRow
             icon={Sparkles}
-            label="Auto-Summarize"
-            description="Summarize after transcription completes"
+            label={t('autoSummarize')}
             type="toggle"
             value={settings.autoSummarize}
             onChange={(v) => updateSetting('autoSummarize', v)}
@@ -374,18 +371,17 @@ export function Settings() {
         </SettingSection>
 
         {/* Notifications */}
-        <SettingSection title="Notifications">
+        <SettingSection title={t('notifications')}>
           <SettingRow
             icon={Bell}
-            label="Push Notifications"
+            label={t('pushNotifications')}
             type="toggle"
             value={settings.notificationsEnabled}
             onChange={(v) => updateSetting('notificationsEnabled', v)}
           />
           <SettingRow
             icon={Clock}
-            label="Study Reminders"
-            description="Requests browser notification permission"
+            label={t('studyReminders')}
             type="toggle"
             value={settings.studyReminders}
             onChange={handleStudyRemindersToggle}
@@ -393,52 +389,49 @@ export function Settings() {
         </SettingSection>
 
         {/* Privacy & Security */}
-        <SettingSection title="Privacy & Security">
+        <SettingSection title={t('privacySecurity')}>
           <SettingRow
             icon={Shield}
-            label="AI Data Usage"
-            description="Allow AI providers to use data for training"
+            label={t('aiDataUsage')}
             type="toggle"
             value={settings.aiDataUsage}
             onChange={(v) => updateSetting('aiDataUsage', v)}
           />
           <SettingRow
             icon={Globe}
-            label="WiFi Only for AI"
-            description="Saves mobile data — recommended in Kenya"
+            label={t('wifiOnly')}
             type="toggle"
             value={settings.wifiOnly}
             onChange={(v) => updateSetting('wifiOnly', v)}
           />
           <SettingRow
             icon={Download}
-            label="Export All My Data"
+            label={t('exportData')}
             onClick={handleExportData}
           />
           <SettingRow
             icon={Trash2}
-            label="Delete Account"
+            label={t('deleteAccount')}
             type="danger"
             onClick={handleDeleteAccount}
           />
         </SettingSection>
 
         {/* About */}
-        <SettingSection title="About">
-          <SettingRow icon={Info} label="App Version" value="1.0.0" />
+        <SettingSection title={t('about')}>
+          <SettingRow icon={Info} label={t('appVersion')} value="1.0.0" />
           <SettingRow
             icon={MessageSquare}
-            label="Join Community (WhatsApp)"
-            description="Group link coming soon"
+            label={t('joinCommunity')}
             onClick={() => showInfo('Coming Soon', 'Our WhatsApp study group link will be added here soon.')}
           />
-          <SettingRow icon={HelpCircle} label="Built with ❤️ in Kenya 🇰🇪" disabled />
+          <SettingRow icon={HelpCircle} label={t('builtWithLove')} disabled />
         </SettingSection>
 
         {/* Footer */}
         <div className="mt-12 text-center pb-12">
           <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em]">
-            Powered by Gemini & Groq Whisper
+            {t('poweredBy')}
           </p>
         </div>
       </div>

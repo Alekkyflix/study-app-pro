@@ -6,6 +6,22 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+@utility bg-accent-primary {
+  background-color: var(--accent-primary, #3b82f6);
+}
+@utility text-accent-primary {
+  color: var(--accent-primary, #3b82f6);
+}
+@utility ring-accent-primary {
+  --tw-ring-color: var(--accent-primary, #3b82f6);
+}
+@utility border-accent-primary {
+  border-color: var(--accent-primary, #3b82f6);
+}
+@utility accent-accent-primary {
+  accent-color: var(--accent-primary, #3b82f6);
+}
+
 .s-card {
   background: var(--s-card);
   border-radius: 12px;
