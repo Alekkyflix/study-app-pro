@@ -138,7 +138,27 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // while auth was still resolving, causing ProtectedRoute to flash.
   const [loading, setLoading] = useState(true);
 
-  // Sync settings to localStorage and apply theme/accent
+  // Apply theme immediately on mount from localStorage (no await needed)
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const saved = localStorage.getItem('studypro_settings');
+    const savedSettings = saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    
+    const effectiveTheme =
+      savedSettings.theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        : savedSettings.theme;
+
+    if (effectiveTheme === 'dark') {
+      root.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+  }, []); // Run once on mount
+
+  // Sync settings to localStorage and apply theme/accent/fontSize/language
   useEffect(() => {
     localStorage.setItem('studypro_settings', JSON.stringify(settings));
 
@@ -152,8 +172,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (effectiveTheme === 'dark') {
       root.classList.add('dark');
+      document.body.classList.add('dark');
     } else {
       root.classList.remove('dark');
+      document.body.classList.remove('dark');
     }
 
     const colors: Record<AccentColor, string> = {
@@ -167,7 +189,19 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       yellow: '#eab308',
     };
     root.style.setProperty('--accent-primary', colors[settings.accentColor]);
-  }, [settings.theme, settings.accentColor]);
+
+    // Apply font size scaling to document root
+    const fontSizeMap: Record<FontSize, string> = {
+      'small': '0.875', // 14px base
+      'default': '1', // 16px base
+      'large': '1.125', // 18px base
+      'extra-large': '1.25', // 20px base
+    };
+    root.style.fontSize = `${parseFloat(fontSizeMap[settings.fontSize]) * 16}px`;
+
+    // Apply language attribute for i18n
+    root.setAttribute('lang', settings.language === 'swahili' ? 'sw' : 'en');
+  }, [settings.theme, settings.accentColor, settings.fontSize, settings.language]);
 
   // Load profile from Supabase once auth has fully resolved
   useEffect(() => {
