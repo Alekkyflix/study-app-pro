@@ -7,8 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#ffffff",
-        foreground: "#000000",
+        'ios-blue':      '#007AFF',
+        'ios-red':       '#FF3B30',
+        'ios-green':     '#34C759',
+        'ios-label':     'var(--ios-label)',
+        'ios-secondary': 'var(--ios-secondary)',
+        'ios-tertiary':  'var(--ios-tertiary)',
+        'ios-bg':        'var(--ios-bg)',
+        'ios-card':      'var(--ios-card)',
+        'ios-separator': 'var(--ios-separator)',
+        'ios-pressed':   'var(--ios-pressed)',
+        'ios-toggle-off':'var(--ios-toggle-off)',
+      },
+      boxShadow: {
+        'ios-toggle': '0 2px 4px rgba(0,0,0,0.3)',
       },
     },
   },
