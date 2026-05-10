@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   User, Palette, Mic, Cpu, Sparkles, Bell, Shield, Info,
   Moon, Sun, Monitor, Type, Globe, Volume2, Clock, Trash2,
@@ -32,15 +32,7 @@ export function Settings() {
   const { showModal, showSuccess, showError, showInfo } = useNotification();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
-  // Apply theme to document root whenever it changes
-  useEffect(() => {
-    const root = document.documentElement;
-    const effective =
-      settings.theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-        : settings.theme;
-    effective === 'dark' ? root.classList.add('dark') : root.classList.remove('dark');
-  }, [settings.theme]);
+  // NOTE: Theme is already applied by SettingsContext, no need to duplicate here
 
   if (settingsLoading || !profile) {
     return (

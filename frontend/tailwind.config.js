@@ -18,6 +18,7 @@ export default {
         'ios-separator': 'var(--ios-separator)',
         'ios-pressed':   'var(--ios-pressed)',
         'ios-toggle-off':'var(--ios-toggle-off)',
+        'accent-primary': 'var(--accent-primary, #3b82f6)',
       },
       boxShadow: {
         'ios-toggle': '0 2px 4px rgba(0,0,0,0.3)',
