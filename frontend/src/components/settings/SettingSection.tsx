@@ -12,7 +12,7 @@ const SettingSection: React.FC<SettingSectionProps> = ({ title, children }) => {
         {title}
       </h3>
       <div className="glass-card rounded-[2rem] overflow-hidden premium-shadow">
-        <div className="divide-y divide-gray-50/50">
+        <div>
           {children}
         </div>
       </div>

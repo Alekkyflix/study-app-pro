@@ -177,7 +177,7 @@ export function Settings() {
 
         {/* Appearance */}
         <SettingSection title="Appearance">
-          <div className="p-4 border-b border-gray-50 bg-gray-50/20">
+          <div className="p-4 bg-gray-50/20">
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 ml-1">Accent Color</p>
             <div className="flex items-center justify-between px-2">
               {ACCENT_COLORS.map((color) => (
@@ -206,7 +206,7 @@ export function Settings() {
             onChange={(val) => updateSetting('theme', val)}
           />
 
-          <div className="p-4 border-b border-gray-50">
+          <div className="p-4">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center justify-center">
                 <Type className="w-5 h-5" />
