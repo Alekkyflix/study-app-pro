@@ -11,7 +11,7 @@ const SettingSection: React.FC<SettingSectionProps> = ({ title, children }) => {
       <h3 className="px-5 text-xs font-black uppercase tracking-[0.15em] text-gray-400 mb-3 ml-1">
         {title}
       </h3>
-      <div className="glass-card rounded-[2rem] overflow-hidden premium-shadow">
+      <div className="glass-card rounded-[2rem] premium-shadow">
         <div>
           {children}
         </div>
