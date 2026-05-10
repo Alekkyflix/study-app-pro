@@ -123,13 +123,13 @@ export function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] pb-24 md:pb-8 text-gray-900 tracking-tight">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-gray-950 pb-24 md:pb-8 text-gray-900 dark:text-white tracking-tight transition-colors duration-300">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-gray-100 blur-3xl rounded-full opacity-50 -z-10 pointer-events-none"></div>
       <div className="max-w-4xl mx-auto px-4 py-12 z-10">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-5xl font-extrabold text-gray-900 mb-3 tracking-tighter">Study Reports</h1>
-          <p className="text-xl font-medium text-gray-500 tracking-tight">Generate comprehensive study materials from your lectures</p>
+          <h1 className="text-5xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tighter">Study Reports</h1>
+          <p className="text-xl font-medium text-gray-500 dark:text-gray-400 tracking-tight">Generate comprehensive study materials from your lectures</p>
         </div>
 
         {/* Quick Actions */}
@@ -142,18 +142,18 @@ export function Reports() {
             <button
               key={i}
               onClick={() => setSelectorOpen({ type: action.type, label: action.label })}
-              className="glass-card rounded-3xl p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] text-left premium-shadow border border-gray-100"
+              className="glass-card rounded-3xl p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] text-left premium-shadow border border-gray-100 dark:border-gray-800"
             >
-              <action.icon className="w-8 h-8 text-gray-900 mb-4" />
-              <p className="font-bold tracking-tight text-gray-900 text-lg mb-1">{action.label}</p>
-              <p className="text-sm font-medium text-gray-500">{action.desc}</p>
+              <action.icon className="w-8 h-8 text-gray-900 dark:text-white mb-4" />
+              <p className="font-bold tracking-tight text-gray-900 dark:text-white text-lg mb-1">{action.label}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{action.desc}</p>
             </button>
           ))}
         </div>
 
         {/* Reports List */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 mb-6">Recent Reports</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">Recent Reports</h2>
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => <LectureSkeleton key={i} />)}
@@ -164,21 +164,21 @@ export function Reports() {
             reports.map((report) => (
             <div
               key={report.id}
-              className="glass-card rounded-2xl p-6 hover:shadow-lg transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-gray-100"
+              className="glass-card rounded-2xl p-6 hover:shadow-lg transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-gray-100 dark:border-gray-800"
             >
               <div className="flex items-center gap-5">
-                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-                  <FileText className="w-6 h-6 text-gray-700" />
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center shrink-0">
+                  <FileText className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                 </div>
                 <div>
-                  <h3 className="font-bold tracking-tight text-gray-900 text-lg leading-tight">{report.title}</h3>
+                  <h3 className="font-bold tracking-tight text-gray-900 dark:text-white text-lg leading-tight">{report.title}</h3>
                   <div className="flex items-center gap-3 mt-1.5">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${typeColors[report.type]}`}
                     >
                       {typeLabels[report.type]}
                     </span>
-                    <span className="text-xs font-medium text-gray-500">{report.date}</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{report.date}</span>
                   </div>
                 </div>
               </div>
@@ -210,8 +210,8 @@ export function Reports() {
         </div>
 
         {/* Empty State */}
-        <div className="glass-card rounded-3xl p-12 text-center mt-12">
-          <p className="text-gray-500 font-medium tracking-tight mb-6">Want to generate a new report?</p>
+        <div className="glass-card rounded-3xl p-12 text-center mt-12 border border-gray-100 dark:border-gray-800">
+          <p className="text-gray-500 dark:text-gray-400 font-medium tracking-tight mb-6">Want to generate a new report?</p>
           <button 
             onClick={() => navigate("/dashboard")}
             className="btn-primary mx-auto shadow-xl hover:shadow-2xl"
@@ -233,29 +233,29 @@ export function Reports() {
       {/* Report Type Selector Modal */}
       {selectorOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md premium-shadow">
-            <h3 className="text-xl font-bold tracking-tight text-gray-900 mb-2">Generate {selectorOpen.label}</h3>
-            <p className="text-sm font-medium text-gray-500 mb-6">Select a transcribed lecture to generate this report for:</p>
-            <div className="max-h-[60vh] overflow-y-auto space-y-2 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 w-full max-w-md premium-shadow border border-gray-100 dark:border-gray-800">
+            <h3 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">Generate {selectorOpen.label}</h3>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">Select a transcribed lecture to generate this report for:</p>
+            <div className="max-h-[60vh] overflow-y-auto space-y-2 mb-6 pr-2">
               {reports.map(r => (
                 <button
                   key={r.id}
                   onClick={() => handleGenerateReport(r.id, selectorOpen.type)}
-                  className="w-full text-left p-4 hover:bg-gray-50 border border-gray-100 rounded-2xl transition"
+                  className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-2xl transition"
                 >
-                  <div className="font-semibold text-gray-900 tracking-tight">{r.title}</div>
-                  <div className="text-xs text-gray-400 mt-1">{r.date}</div>
+                  <div className="font-semibold text-gray-900 dark:text-white tracking-tight">{r.title}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{r.date}</div>
                 </button>
               ))}
               {reports.length === 0 && (
-                <div className="text-center text-sm text-gray-400 p-4">
+                <div className="text-center text-sm text-gray-400 dark:text-gray-500 p-4">
                   No transcribed lectures available. Please record a lecture first.
                 </div>
               )}
             </div>
             <button
               onClick={() => setSelectorOpen(null)}
-              className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition"
+              className="w-full py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition"
             >
               Cancel
             </button>

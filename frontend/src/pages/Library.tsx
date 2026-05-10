@@ -165,12 +165,12 @@ export function Library() {
   );
 
   return (
-    <div className="min-h-screen bg-[#fafafa] pb-24 md:pb-8 text-gray-900 tracking-tight">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-gray-950 pb-24 md:pb-8 text-gray-900 dark:text-white tracking-tight transition-colors duration-300">
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-gray-100 blur-3xl rounded-full opacity-50 -z-10 pointer-events-none"></div>
       <div className="max-w-7xl mx-auto px-4 py-12 z-10">
         <div className="mb-12">
-          <h1 className="text-5xl font-extrabold text-gray-900 mb-3 tracking-tighter">Lecture Library</h1>
-          <p className="text-xl font-medium text-gray-500 tracking-tight">Browse and manage your recorded lectures</p>
+          <h1 className="text-5xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tighter">Lecture Library</h1>
+          <p className="text-xl font-medium text-gray-500 dark:text-gray-400 tracking-tight">Browse and manage your recorded lectures</p>
         </div>
 
         <div className="glass-card rounded-2xl p-4 mb-8">
@@ -181,15 +181,15 @@ export function Library() {
               placeholder="Search lectures..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 transition-all font-medium"
+              className="w-full pl-12 pr-4 py-3 bg-gray-50/50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white transition-all font-medium"
             />
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
           <div className="w-full md:w-1/3 glass-card rounded-3xl overflow-hidden flex flex-col h-[600px] md:h-[700px] premium-shadow">
-            <div className="p-6 border-b border-gray-100 bg-white">
-              <h2 className="font-bold tracking-tight text-gray-900 text-lg">Files ({filtered.length})</h2>
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <h2 className="font-bold tracking-tight text-gray-900 dark:text-white text-lg">Files ({filtered.length})</h2>
             </div>
             <div className="overflow-y-auto flex-1 p-2 space-y-1">
               {loading ? (
@@ -213,7 +213,7 @@ export function Library() {
                       <BookOpen className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className={`font-bold tracking-tight line-clamp-1 ${selectedLectureId === lecture.id ? "text-white" : "text-gray-900"}`}>
+                      <h3 className={`font-bold tracking-tight line-clamp-1 ${selectedLectureId === lecture.id ? "text-white" : "text-gray-900 dark:text-white"}`}>
                         {lecture.title}
                       </h3>
                       <div className={`flex items-center gap-3 mt-1.5 text-xs font-medium ${selectedLectureId === lecture.id ? "text-gray-300" : "text-gray-500"}`}>
@@ -250,7 +250,7 @@ export function Library() {
               <div className="flex flex-col h-full overflow-y-auto pr-2">
                 <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-100 shrink-0">
                   <div>
-                    <h2 className="text-3xl font-extrabold tracking-tighter text-gray-900 mb-2">
+                    <h2 className="text-3xl font-extrabold tracking-tighter text-gray-900 dark:text-white mb-2">
                       {selectedLectureDetails.title}
                     </h2>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -294,7 +294,7 @@ export function Library() {
                     </button>
                     <button
                       onClick={() => handleDelete(selectedLectureDetails.id)}
-                      className="p-4 rounded-full border border-gray-200 bg-white text-red-500 hover:border-red-200 hover:bg-red-50 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm"
+                      className="p-4 rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-red-500 hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm"
                       title="Delete Lecture"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -306,20 +306,20 @@ export function Library() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="w-5 h-5 text-purple-500" />
-                      <h3 className="text-lg font-semibold text-gray-900">Summary</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Summary</h3>
                     </div>
                     {selectedLectureDetails.summary ? (
-                      <div className="bg-purple-50/50 p-5 rounded-xl border border-purple-100/50 text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      <div className="bg-purple-50/50 dark:bg-purple-900/20 p-5 rounded-xl border border-purple-100/50 dark:border-purple-800/30 text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                         {selectedLectureDetails.summary}
                       </div>
                     ) : (
-                      <div className="bg-gray-50 border border-gray-100 p-8 rounded-3xl flex flex-col items-center justify-center text-center gap-4">
-                        <div className="w-14 h-14 bg-white shadow-sm border border-gray-100 text-gray-900 rounded-full flex items-center justify-center mb-2">
+                      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-8 rounded-3xl flex flex-col items-center justify-center text-center gap-4">
+                        <div className="w-14 h-14 bg-white dark:bg-gray-900 shadow-sm border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white rounded-full flex items-center justify-center mb-2">
                           <FileText className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900 mb-2 text-lg">No Summary Available</h4>
-                          <p className="text-sm font-medium text-gray-500 max-w-sm mb-4">Generate an AI-powered summary to condense this lecture into its core key concepts.</p>
+                          <h4 className="font-bold text-gray-900 dark:text-white mb-2 text-lg">No Summary Available</h4>
+                          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-sm mb-4">Generate an AI-powered summary to condense this lecture into its core key concepts.</p>
                         </div>
                         <button
                           onClick={handleGenerateSummary}
@@ -343,14 +343,14 @@ export function Library() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Mic className="w-5 h-5 text-blue-500" />
-                      <h3 className="text-lg font-semibold text-gray-900">Transcript</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Transcript</h3>
                     </div>
                     {selectedLectureDetails.transcript ? (
-                      <div className="bg-blue-50/30 p-5 rounded-xl border border-blue-50 text-gray-700 whitespace-pre-wrap leading-relaxed font-serif">
+                      <div className="bg-blue-50/30 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-50 dark:border-blue-900/30 text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed font-serif">
                         {selectedLectureDetails.transcript}
                       </div>
                     ) : (
-                      <p className="text-gray-500 italic bg-gray-50 p-4 rounded-lg">No transcript available.</p>
+                      <p className="text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">No transcript available.</p>
                     )}
                   </div>
                 </div>

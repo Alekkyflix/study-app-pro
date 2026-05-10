@@ -14,7 +14,7 @@ export function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
 
         {/* Logo */}
@@ -23,8 +23,8 @@ export function Header() {
             <Mic className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Study Pro</h1>
-            <p className="text-xs text-gray-500">AI-powered lectures</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Study Pro</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">AI-powered lectures</p>
           </div>
         </div>
 
@@ -34,14 +34,14 @@ export function Header() {
             <Link
               key={path}
               to={path}
-              className="text-gray-700 hover:text-blue-600 font-medium text-sm transition"
+              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm transition"
             >
               {label}
             </Link>
           ))}
           <Link
             to="/settings"
-            className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-700 hover:text-blue-600"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
           >
             <Settings className="w-5 h-5" />
           </Link>
@@ -50,25 +50,25 @@ export function Header() {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition"
+          className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
         >
           {menuOpen ? (
-            <X className="w-6 h-6 text-gray-700" />
+            <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
           ) : (
-            <Menu className="w-6 h-6 text-gray-700" />
+            <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
           )}
         </button>
       </div>
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <nav className="md:hidden bg-gray-50 border-t border-gray-200 px-4 py-3 space-y-2">
+        <nav className="md:hidden bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-4 py-3 space-y-2 transition-colors duration-300">
           {navItems.map(({ path, label }) => (
             <Link
               key={path}
               to={path}
               onClick={() => setMenuOpen(false)}
-              className="block px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium"
+              className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg font-medium"
             >
               {label}
             </Link>
@@ -76,7 +76,7 @@ export function Header() {
           <Link
             to="/settings"
             onClick={() => setMenuOpen(false)}
-            className="block px-3 py-2 text-gray-700 hover:bg-gray-200 rounded-lg font-medium"
+            className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg font-medium"
           >
             Settings
           </Link>

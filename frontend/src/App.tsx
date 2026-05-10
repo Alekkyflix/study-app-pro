@@ -26,7 +26,7 @@ import { ResetPassword } from "./pages/auth/ResetPassword";
 
 function MainLayout() {
   return (
-    <div className="min-h-screen bg-[#fafafa] flex flex-col">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-gray-950 flex flex-col transition-colors duration-300">
       <Header />
       <main className="flex-1 overflow-auto">
         <Outlet />

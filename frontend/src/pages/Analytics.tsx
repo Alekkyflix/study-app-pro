@@ -176,14 +176,14 @@ export function Analytics() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] pb-24 md:pb-8">
+    <div className="min-h-screen bg-[#fafafa] dark:bg-gray-950 pb-24 md:pb-8 transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900 mb-1">
+          <h1 className="text-4xl font-extrabold tracking-tighter text-gray-900 dark:text-white mb-1">
             Analytics
           </h1>
-          <p className="text-gray-500 font-medium">Your real study progress</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Your real study progress</p>
         </div>
 
         {/* Time Range Filter */}
@@ -194,8 +194,8 @@ export function Analytics() {
               onClick={() => setTimeRange(range)}
               className={`px-4 py-2 rounded-xl font-bold text-sm transition capitalize ${
                 timeRange === range
-                  ? "bg-gray-900 text-white shadow-md"
-                  : "bg-white text-gray-500 border border-gray-100 hover:border-gray-200"
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md"
+                  : "bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
               }`}
             >
               {range}
@@ -205,7 +205,7 @@ export function Analytics() {
 
         {/* No data state */}
         {totalLectures === 0 && (
-          <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center mb-8">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-12 text-center mb-8">
             <BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-4" />
             <p className="text-gray-400 font-semibold">
               No lectures recorded in this period.
@@ -223,7 +223,7 @@ export function Analytics() {
             return (
               <div
                 key={i}
-                className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm"
+                className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-5 shadow-sm"
               >
                 <div className={`${metric.color} p-3 rounded-2xl w-fit mb-4`}>
                   <Icon className="w-5 h-5" />
@@ -231,7 +231,7 @@ export function Analytics() {
                 <p className="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-1">
                   {metric.label}
                 </p>
-                <p className="text-2xl font-extrabold tracking-tighter text-gray-900">
+                <p className="text-2xl font-extrabold tracking-tighter text-gray-900 dark:text-white">
                   {metric.value}
                   <span className="text-sm font-semibold text-gray-400 ml-1">
                     {metric.sub}
@@ -244,8 +244,8 @@ export function Analytics() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Activity Chart — Last 7 Days */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h2 className="text-base font-extrabold tracking-tighter text-gray-900 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <h2 className="text-base font-extrabold tracking-tighter text-gray-900 dark:text-white mb-6">
               Lectures — Last 7 Days
             </h2>
             <div className="flex items-end justify-between h-48 gap-2">
@@ -265,8 +265,8 @@ export function Analytics() {
           </div>
 
           {/* AI Coverage Breakdown */}
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
-            <h2 className="text-base font-extrabold tracking-tighter text-gray-900 mb-6">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+            <h2 className="text-base font-extrabold tracking-tighter text-gray-900 dark:text-white mb-6">
               AI Processing Coverage
             </h2>
             {totalLectures === 0 ? (
@@ -281,15 +281,15 @@ export function Analytics() {
                   return (
                     <div key={i}>
                       <div className="flex justify-between mb-2">
-                        <p className="text-sm font-bold text-gray-700">{item.name}</p>
-                        <p className="text-sm font-black text-gray-900">
+                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{item.name}</p>
+                        <p className="text-sm font-black text-gray-900 dark:text-white">
                           {item.value}
                           <span className="text-gray-400 font-semibold">
                             /{item.total}
                           </span>
                         </p>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-700 ${item.color}`}
                           style={{ width: `${pct}%` }}
@@ -305,18 +305,18 @@ export function Analytics() {
 
         {/* Recent Lectures Table */}
         {lectures.length > 0 && (
-          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm mt-6">
-            <h2 className="text-base font-extrabold tracking-tighter text-gray-900 mb-4">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm mt-6">
+            <h2 className="text-base font-extrabold tracking-tighter text-gray-900 dark:text-white mb-4">
               Recent Lectures
             </h2>
             <div className="space-y-2">
               {lectures.slice(0, 5).map((l) => (
                 <div
                   key={l.id}
-                  className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0"
+                  className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-gray-800 last:border-0"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">{l.title}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{l.title}</p>
                     <p className="text-[11px] text-gray-400 font-semibold">
                       {l.created_at
                         ? new Date(l.created_at).toLocaleDateString()

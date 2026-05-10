@@ -447,7 +447,7 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-24 md:pb-0 text-gray-900 tracking-tight">
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex flex-col pb-24 md:pb-0 text-gray-900 dark:text-white tracking-tight transition-colors duration-300">
       {/* Decorative background glow mimicking subtle WebGL blooms */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gray-100 blur-3xl rounded-full opacity-50 -z-10 pointer-events-none"></div>
 
@@ -455,10 +455,10 @@ export function Home() {
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-12 z-10">
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-4 tracking-tighter">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tighter">
             Record Your Lecture
           </h1>
-          <p className="text-xl font-medium text-gray-500 tracking-tight">
+          <p className="text-xl font-medium text-gray-500 dark:text-gray-400 tracking-tight">
             Capture your thoughts, let AI transform them.
           </p>
         </div>
@@ -473,7 +473,7 @@ export function Home() {
             value={lectureTitle}
             onChange={(e) => setLectureTitle(e.target.value)}
             placeholder="e.g., Physics - Quantum Mechanics 101"
-            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:bg-white text-gray-900 transition-all font-medium"
+            className="w-full px-6 py-4 bg-gray-50/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:bg-white dark:focus:bg-gray-900 text-gray-900 dark:text-white transition-all font-medium"
           />
         </div>
 
@@ -563,7 +563,7 @@ export function Home() {
         {currentLectureId && (
           <div className="glass-card rounded-3xl p-8 space-y-6 premium-shadow">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Lecture Actions</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Lecture Actions</h3>
               <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full">
                 Saved
               </span>
@@ -571,7 +571,7 @@ export function Home() {
 
             {/* Status Display */}
             {status && (
-              <div className="bg-gray-50 border border-gray-200 text-gray-700 font-medium tracking-tight p-4 rounded-2xl text-sm">
+              <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium tracking-tight p-4 rounded-2xl text-sm">
                 {status}
               </div>
             )}
@@ -581,7 +581,7 @@ export function Home() {
               <button
                 onClick={handleTranscribe}
                 disabled={loading || !!transcript}
-                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50"
+                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50 dark:disabled:bg-gray-800"
               >
                 {loading && !transcript ? <InlineLoader /> : <Mic className="w-5 h-5 mb-1" />}
                 <span className="text-xs uppercase tracking-wider mt-1">{transcript ? "Transcribed" : "Transcribe"}</span>
@@ -590,7 +590,7 @@ export function Home() {
               <button
                 onClick={handleSummarize}
                 disabled={loading || !transcript || !!summary}
-                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50"
+                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50 dark:disabled:bg-gray-800"
               >
                 {loading && !summary ? <InlineLoader /> : <FileText className="w-5 h-5 mb-1" />}
                 <span className="text-xs uppercase tracking-wider mt-1">{summary ? "Summarized" : "Summarize"}</span>
@@ -599,7 +599,7 @@ export function Home() {
               <button
                 onClick={handleOpenChat}
                 disabled={!transcript}
-                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50"
+                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50 dark:disabled:bg-gray-800"
               >
                 <MessageSquare className="w-5 h-5 mb-1" />
                 <span className="text-xs uppercase tracking-wider">{transcript ? "Open Chat" : "Chat Requires Transcript"}</span>
@@ -608,7 +608,7 @@ export function Home() {
               <button
                 onClick={handleOpenReport}
                 disabled={!summary}
-                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50"
+                className="btn-secondary flex-col py-6 h-auto disabled:bg-gray-50 dark:disabled:bg-gray-800"
               >
                 <DownloadCloud className="w-5 h-5 mb-1" />
                 <span className="text-xs uppercase tracking-wider">{summary ? "View Report" : "Report Requires Summary"}</span>
@@ -618,8 +618,8 @@ export function Home() {
             {/* Transcript Display */}
             {transcript && (
               <div className="border-t border-gray-100 pt-6 mt-6">
-                <h4 className="font-bold tracking-tight text-gray-900 mb-3">Transcript</h4>
-                <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-2xl max-h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed font-medium">
+                <h4 className="font-bold tracking-tight text-gray-900 dark:text-white mb-3">Transcript</h4>
+                <div className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl max-h-40 overflow-y-auto text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
                   {transcript.substring(0, 300)}...
                 </div>
               </div>
@@ -628,8 +628,8 @@ export function Home() {
             {/* Summary Display */}
             {summary && (
               <div className="border-t border-gray-100 pt-6">
-                <h4 className="font-bold tracking-tight text-gray-900 mb-3">Summary</h4>
-                <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-2xl max-h-40 overflow-y-auto text-sm text-gray-700 leading-relaxed font-medium">
+                <h4 className="font-bold tracking-tight text-gray-900 dark:text-white mb-3">Summary</h4>
+                <div className="bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl max-h-40 overflow-y-auto text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
                   {summary.substring(0, 300)}...
                 </div>
               </div>
@@ -643,7 +643,7 @@ export function Home() {
                 setTranscript("");
                 setSummary("");
               }}
-              className="w-full mt-4 bg-transparent border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold py-3 rounded-full transition text-sm flex justify-center items-center gap-2"
+              className="w-full mt-4 bg-transparent border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold py-3 rounded-full transition text-sm flex justify-center items-center gap-2"
             >
               New Lecture
             </button>
@@ -668,7 +668,7 @@ export function Home() {
                 <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <FileUp className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-sm font-extrabold tracking-tight text-gray-900">Upload Audio</span>
+                <span className="text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">Upload Audio</span>
                 <span className="text-xs font-medium text-gray-400 mt-1">MP3, WAV, M4A</span>
               </button>
               
@@ -680,7 +680,7 @@ export function Home() {
                 <div className="w-12 h-12 bg-white border border-gray-200 shadow-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <FileText className="w-5 h-5 text-gray-900" />
                 </div>
-                <span className="text-sm font-extrabold tracking-tight text-gray-900">Upload Document</span>
+                <span className="text-sm font-extrabold tracking-tight text-gray-900 dark:text-white">Upload Document</span>
                 <span className="text-xs font-medium text-gray-400 mt-1">PDF, TXT</span>
               </button>
             </div>
