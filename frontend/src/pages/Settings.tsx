@@ -225,7 +225,7 @@ export function Settings() {
                 const sizes = ['small', 'default', 'large', 'extra-large'] as const;
                 updateSetting('fontSize', sizes[parseInt(e.target.value)]);
               }}
-              className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gray-900"
+              className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-primary"
             />
             <div className="flex justify-between mt-2 px-1">
               <span className="text-[10px] font-bold text-gray-300">A</span>
