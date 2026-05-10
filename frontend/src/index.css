@@ -1,37 +1,32 @@
 @import "tailwindcss";
-@config "../tailwind.config.js";
-/* ── Light theme (default) ─────────────────────────────────── */
+
+
+/* iOS light theme */
 :root {
-  --s-bg:        #F2F2F7;
-  --s-card:      #FFFFFF;
-  --s-label:     #000000;
-  --s-sub:       #6C6C70;
-  --s-dim:       #AEAEB2;
-  --s-sep:       rgba(60,60,67,0.12);
-  --s-press:     rgba(0,0,0,0.06);
-  --s-off:       #E5E5EA;
-  --s-icon-bg:   rgba(0,0,0,0.06);
+  --ios-label:      #000000;
+  --ios-secondary:  #6C6C70;
+  --ios-tertiary:   #AEAEB2;
+  --ios-bg:         #F2F2F7;
+  --ios-card:       #FFFFFF;
+  --ios-separator:  rgba(60,60,67,0.12);
+  --ios-pressed:    rgba(0,0,0,0.05);
+  --ios-toggle-off: #E5E5EA;
 }
 
-/* ── Dark theme ────────────────────────────────────────────── */
+/* iOS dark theme */
 .dark {
-  --s-bg:        #000000;
-  --s-card:      #1C1C1E;
-  --s-label:     #FFFFFF;
-  --s-sub:       #AEAEB2;
-  --s-dim:       #6C6C70;
-  --s-sep:       rgba(84,84,88,0.36);
-  --s-press:     rgba(255,255,255,0.08);
-  --s-off:       #39393D;
-  --s-icon-bg:   rgba(255,255,255,0.1);
+  --ios-label:      #FFFFFF;
+  --ios-secondary:  #AEAEB2;
+  --ios-tertiary:   #6C6C70;
+  --ios-bg:         #000000;
+  --ios-card:       #1C1C1E;
+  --ios-separator:  rgba(84,84,88,0.36);
+  --ios-pressed:    rgba(255,255,255,0.08);
+  --ios-toggle-off: #39393D;
 }
 
-/* ── Settings page base ────────────────────────────────────── */
-.settings-root {
-  background: var(--s-bg);
-  color: var(--s-label);
-  min-height: 100vh;
-  transition: background 0.3s, color 0.3s;
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 .s-card {
