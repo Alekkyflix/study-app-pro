@@ -29,23 +29,23 @@ const SettingRow: React.FC<SettingRowProps> = ({
     <div 
       onClick={onClick}
       className={`
-        flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors cursor-pointer
+        flex items-center justify-between p-4 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer
         ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
       `}
     >
       <div className="flex items-center gap-4 flex-1">
         <div className={`
           w-10 h-10 rounded-xl flex items-center justify-center shrink-0
-          ${type === 'danger' ? 'bg-red-50 text-red-500' : 'bg-gray-50 text-gray-500'}
+          ${type === 'danger' ? 'bg-red-50 dark:bg-red-950 text-red-500' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}
         `}>
           <Icon className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`font-bold tracking-tight ${type === 'danger' ? 'text-red-600' : 'text-gray-900'} leading-none mb-1`}>
+          <p className={`font-bold tracking-tight ${type === 'danger' ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'} leading-none mb-1`}>
             {label}
           </p>
           {description && (
-            <p className="text-xs font-medium text-gray-400 line-clamp-1 italic">
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 line-clamp-1 italic">
               {description}
             </p>
           )}
@@ -58,7 +58,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
             onClick={(e) => { e.stopPropagation(); onChange?.(!value); }}
             className={`
               w-12 h-6 rounded-full transition-all relative
-              ${value ? 'bg-gray-900 shadow-inner' : 'bg-gray-200'}
+              ${value ? 'bg-accent-primary shadow-inner' : 'bg-gray-200 dark:bg-gray-700'}
             `}
           >
             <motion.div
@@ -74,7 +74,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
             value={value as string}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onChange?.(e.target.value)}
-            className="bg-transparent text-sm font-bold text-gray-900 border-none focus:ring-0 cursor-pointer text-right appearance-none pr-0"
+            className="bg-transparent text-sm font-bold text-gray-900 dark:text-white border-none focus:ring-0 cursor-pointer text-right appearance-none pr-0"
           >
             {options.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -86,13 +86,13 @@ const SettingRow: React.FC<SettingRowProps> = ({
 
         {type === 'nav' && (
           <div className="flex items-center gap-2">
-            {value !== undefined && <span className="text-sm font-bold text-gray-400">{value}</span>}
-            <ChevronRight className="w-4 h-4 text-gray-300" />
+            {value !== undefined && <span className="text-sm font-bold text-gray-400 dark:text-gray-500">{value}</span>}
+            <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
           </div>
         )}
 
         {type === 'danger' && (
-           <ChevronRight className="w-4 h-4 text-red-200" />
+           <ChevronRight className="w-4 h-4 text-red-200 dark:text-red-900" />
         )}
       </div>
     </div>
