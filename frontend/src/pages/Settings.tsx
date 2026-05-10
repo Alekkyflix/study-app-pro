@@ -170,7 +170,6 @@ export function Settings() {
           name={profile.full_name}
           email={user?.email || ''}
           university={profile.university}
-          course={profile.course}
           yearOfStudy={profile.year_of_study}
           joinedDate={profile.joined_at}
           avatarUrl={profile.avatar_url}
