@@ -288,7 +288,7 @@ export function Settings() {
           {[['low','Low','~28 MB / hr'],['standard','Standard','~56 MB / hr'],['high','High','~112 MB / hr']].map(([v,l,sub],i) => (
             <Row key={v} delay={0.05+i*0.04} label={l} sub={sub}
               right={settings.audioQuality === v ? <Checkmark accent={accent}/> : undefined}
-              onClick={() => updateSetting('audioQuality', v)} />
+              onClick={() => updateSetting('audioQuality', v as any)} />
           ))}
         </SectionBlock>
         <SectionBlock delay={0.2}>
@@ -323,7 +323,7 @@ export function Settings() {
           ].map(([v,l,sub],i) => (
             <Row key={v} delay={0.05+i*0.04} label={l} sub={sub}
               right={settings.transcriptionModel === v ? <Checkmark accent={accent}/> : undefined}
-              onClick={() => updateSetting('transcriptionModel', v)} />
+              onClick={() => updateSetting('transcriptionModel', v as any)} />
           ))}
         </SectionBlock>
         <SectionBlock delay={0.22}>
@@ -351,7 +351,7 @@ export function Settings() {
           ].map(([v,l,sub],i) => (
             <Row key={v} delay={0.05+i*0.04} label={l} sub={sub}
               right={settings.summaryType === v ? <Checkmark accent={accent}/> : undefined}
-              onClick={() => updateSetting('summaryType', v)} />
+              onClick={() => updateSetting('summaryType', v as any)} />
           ))}
         </SectionBlock>
         <SectionBlock delay={0.25}>
