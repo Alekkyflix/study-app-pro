@@ -138,6 +138,26 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // while auth was still resolving, causing ProtectedRoute to flash.
   const [loading, setLoading] = useState(true);
 
+  // Apply theme immediately on mount from localStorage (no await needed)
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const saved = localStorage.getItem('studypro_settings');
+    const savedSettings = saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    
+    const effectiveTheme =
+      savedSettings.theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        : savedSettings.theme;
+
+    if (effectiveTheme === 'dark') {
+      root.classList.add('dark');
+      document.body.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+  }, []); // Run once on mount
+
   // Sync settings to localStorage and apply theme/accent/fontSize/language
   useEffect(() => {
     localStorage.setItem('studypro_settings', JSON.stringify(settings));
@@ -152,8 +172,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (effectiveTheme === 'dark') {
       root.classList.add('dark');
+      document.body.classList.add('dark');
     } else {
       root.classList.remove('dark');
+      document.body.classList.remove('dark');
     }
 
     const colors: Record<AccentColor, string> = {
