@@ -1,17 +1,21 @@
 import { Home, Library, MessageSquare, BarChart3, Settings, TrendingUp } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
+import { useSettings } from "../context/SettingsContext";
+import { useTranslation } from "../lib/i18n";
 
 export function BottomNav() {
   const location = useLocation();
+  const { settings } = useSettings();
+  const { t } = useTranslation(settings.language);
 
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: "/dashboard", label: "Record", icon: Home },
-    { path: "/library", label: "Library", icon: Library },
-    { path: "/reports", label: "Reports", icon: BarChart3 },
-    { path: "/analytics", label: "Analytics", icon: TrendingUp },
-    { path: "/settings", label: "Settings", icon: Settings },
+    { path: "/dashboard", label: t("Record"), icon: Home },
+    { path: "/library", label: t("Library"), icon: Library },
+    { path: "/reports", label: t("Reports"), icon: BarChart3 },
+    { path: "/analytics", label: t("Analytics"), icon: TrendingUp },
+    { path: "/settings", label: t("Settings"), icon: Settings },
   ];
 
   return (

@@ -2,15 +2,20 @@ import { Mic, Menu, X, Settings } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { useSettings } from "../context/SettingsContext";
+import { useTranslation } from "../lib/i18n";
+
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { settings } = useSettings();
+  const { t } = useTranslation(settings.language);
 
   const navItems = [
-    { path: "/dashboard", label: "Record" },
-    { path: "/library", label: "Library" },
-    { path: "/chat", label: "Chat" },
-    { path: "/reports", label: "Reports" },
-    { path: "/analytics", label: "Analytics" },
+    { path: "/dashboard", label: t("Record") },
+    { path: "/library", label: t("Library") },
+    { path: "/chat", label: t("Chat") },
+    { path: "/reports", label: t("Reports") },
+    { path: "/analytics", label: t("Analytics") },
   ];
 
   return (
@@ -78,7 +83,7 @@ export function Header() {
             onClick={() => setMenuOpen(false)}
             className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg font-medium"
           >
-            Settings
+            {t("Settings")}
           </Link>
         </nav>
       )}
