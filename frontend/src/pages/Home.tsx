@@ -8,6 +8,7 @@ import { ReportPanel } from "../components/ReportPanel";
 import { apiClient, checkWifiOnly } from "../services/api";
 import { useNotification } from "../context/NotificationContext";
 import { useSettings } from "../context/SettingsContext";
+import { useTranslation } from "../lib/i18n";
 import { EmptyState, InlineLoader, RecordingIndicator, OnboardingTooltip } from "../components/notifications";
 
 export function Home() {
@@ -18,6 +19,7 @@ export function Home() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const { showSuccess, showError, showWarning, showInfo, showConsent, setLoading: setGlobalLoading } = useNotification();
   const { settings } = useSettings();
+  const { t } = useTranslation(settings.language);
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
@@ -374,7 +376,7 @@ export function Home() {
       setLoading(true);
       setStatus("🎤 Transcribing audio...");
 
-      const result = await apiClient.transcribeLecture(targetId, settings.transcriptionModel);
+      const result = await apiClient.transcribeLecture(targetId, settings.transcriptionModel, settings.language);
       if (!result.success) {
         throw new Error(result.error || "Transcription failed");
       }
@@ -413,7 +415,7 @@ export function Home() {
       setLoading(true);
       setStatus("📝 Generating summary...");
 
-      const result = await apiClient.summarizeLecture(targetId, settings.summaryType);
+      const result = await apiClient.summarizeLecture(targetId, settings.summaryType, settings.language);
       if (!result.success) {
         throw new Error(result.error || "Summarization failed");
       }
@@ -456,23 +458,23 @@ export function Home() {
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tighter">
-            Record Your Lecture
+            {t("Record Your Lecture")}
           </h1>
           <p className="text-xl font-medium text-gray-500 dark:text-gray-400 tracking-tight">
-            Capture your thoughts, let AI transform them.
+            {t("Capture your thoughts, let AI transform them.")}
           </p>
         </div>
 
         {/* Lecture Title Input */}
         <div className="glass-card rounded-3xl p-8 mb-8">
           <label className="block text-sm font-bold tracking-wide uppercase text-gray-400 mb-3 ml-1">
-            Lecture Title
+            {t("Lecture Title")}
           </label>
           <input
             type="text"
             value={lectureTitle}
             onChange={(e) => setLectureTitle(e.target.value)}
-            placeholder="e.g., Physics - Quantum Mechanics 101"
+            placeholder={t("e.g., Physics - Quantum Mechanics 101")}
             className="w-full px-6 py-4 bg-gray-50/50 dark:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:bg-white dark:focus:bg-gray-900 text-gray-900 dark:text-white transition-all font-medium"
           />
         </div>
@@ -503,7 +505,7 @@ export function Home() {
           {showTooltip && (
             <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-20">
               <OnboardingTooltip 
-                message="Tap here to start recording" 
+                message={t("Tap here to start recording")} 
                 onDismiss={dismissTooltip} 
               />
             </div>
@@ -554,7 +556,7 @@ export function Home() {
               disabled={loading}
               className="w-full py-3 text-sm font-semibold text-gray-400 hover:text-red-500 transition-colors"
             >
-              Discard Recording
+              {t("Discard Recording")}
             </button>
           </div>
         )}
@@ -563,9 +565,9 @@ export function Home() {
         {currentLectureId && (
           <div className="glass-card rounded-3xl p-8 space-y-6 premium-shadow">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Lecture Actions</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t("Lecture Actions")}</h3>
               <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                Saved
+                {t("Saved")}
               </span>
             </div>
 
@@ -635,7 +637,6 @@ export function Home() {
               </div>
             )}
 
-            {/* Reset Button */}
             <button
               onClick={() => {
                 setCurrentLectureId(null);
@@ -645,17 +646,16 @@ export function Home() {
               }}
               className="w-full mt-4 bg-transparent border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold py-3 rounded-full transition text-sm flex justify-center items-center gap-2"
             >
-              New Lecture
+              {t("New Lecture")}
             </button>
           </div>
         )}
 
-        {/* Upload Alternatives */}
         {!isRecording && !currentLectureId && !audioBlob && (
           <>
             <div className="flex items-center gap-4 justify-center mb-8 px-8">
               <div className="h-px bg-gray-200 flex-1"></div>
-              <div className="text-xs text-gray-400 font-bold tracking-widest uppercase">Or Upload Directly</div>
+              <div className="text-xs text-gray-400 font-bold tracking-widest uppercase">{t("Or Upload Directly")}</div>
               <div className="h-px bg-gray-200 flex-1"></div>
             </div>
             

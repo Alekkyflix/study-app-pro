@@ -1,6 +1,7 @@
 import { Send, MessageCircle, BookOpen, AlertTriangle, Clock } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { apiClient, ApiError } from "../services/api";
+import { useSettings } from "../context/SettingsContext";
 
 interface Lecture {
   id: string;
@@ -66,6 +67,8 @@ export function Chat() {
     setError(null);
   }, [selectedLectureId]);
 
+  const { settings } = useSettings();
+
   // Scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -91,7 +94,7 @@ export function Chat() {
     setLoading(true);
 
     try {
-      const res = await apiClient.sendChatMessage(selectedLectureId, input);
+      const res = await apiClient.sendChatMessage(selectedLectureId, input, settings.language);
       const aiText = res?.answer || res?.response || "No response from AI.";
       setMessages((prev) => [
         ...prev,

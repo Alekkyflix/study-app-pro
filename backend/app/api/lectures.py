@@ -155,6 +155,7 @@ class LectureUpdate(BaseModel):
 
 class ChatQuery(BaseModel):
     query: str
+    language: Optional[str] = "english"
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +407,7 @@ async def transcribe_lecture(
     request: Request,
     lecture_id: str,
     model: str = "balanced",   # fast | balanced | accurate
+    language: str = "english",
     user_id: str = Depends(get_user_id),
 ):
     try:
@@ -444,7 +446,7 @@ async def transcribe_lecture(
             except ImportError:
                 return _get_transcription_service()
 
-        result = await run_in_threadpool(_make_service().transcribe, local_path)
+        result = await run_in_threadpool(_make_service().transcribe, local_path, language)
 
         if tmp_path_to_clean:
             _delete_local(tmp_path_to_clean)
@@ -475,6 +477,7 @@ async def summarize_lecture(
     request: Request,
     lecture_id: str,
     summary_type: str = "executive",
+    language: str = "english",
     user_id: str = Depends(get_user_id),
 ):
     valid_types = {"executive", "detailed", "questions", "glossary"}
@@ -489,7 +492,7 @@ async def summarize_lecture(
             transcript = lecture.transcript
 
         svc    = _get_summarization_service()
-        result = await run_in_threadpool(svc.summarize, transcript, summary_type)
+        result = await run_in_threadpool(svc.summarize, transcript, summary_type, language)
 
         if result.get("success"):
             with get_db() as db:
@@ -541,6 +544,10 @@ async def chat_lecture(
                 f"Transcript:\n{transcript}\n\n"
                 "Answer strictly based on the transcript above."
             )
+            target_lang = chat_query.language or "english"
+            if target_lang.lower() != "english":
+                prompt += f"\n\nCRITICAL INSTRUCTION: Your output MUST be entirely in {target_lang.capitalize()}."
+            
             return model.generate_content(prompt).text
 
         answer = await run_in_threadpool(_call_gemini)

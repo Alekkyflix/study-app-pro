@@ -37,6 +37,7 @@ class SummarizationService:
         self,
         text: str,
         summary_type: str = "executive",
+        language: str = "english",
     ) -> dict:
         """
         Generate a summary of lecture transcript
@@ -44,6 +45,7 @@ class SummarizationService:
         Args:
             text: Full transcript text
             summary_type: 'executive', 'detailed', 'questions', or 'glossary'
+            language: Target language for the summary
             
         Returns:
             dict with summary and metadata
@@ -71,6 +73,10 @@ Format as a glossary with term and definition.\n\nTranscript:\n{text}""",
             }
 
             prompt = prompts.get(summary_type, prompts["executive"]).format(text=text)
+            
+            if language and language.lower() != "english":
+                prompt += f"\n\nCRITICAL INSTRUCTION: Your output MUST be entirely in {language.capitalize()}."
+
             response = self.model.generate_content(prompt)
 
             return {

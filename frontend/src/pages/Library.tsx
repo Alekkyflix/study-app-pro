@@ -4,6 +4,8 @@ import { apiClient } from "../services/api";
 import { ChatPanel } from "../components/ChatPanel";
 import { useNotification } from "../context/NotificationContext";
 import { EmptyState, InlineLoader, LectureSkeleton } from "../components/notifications";
+import { useSettings } from "../context/SettingsContext";
+import { useTranslation } from "../lib/i18n";
 
 interface Lecture {
   id: string;
@@ -24,6 +26,9 @@ export function Library() {
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false);
   const { showModal, showSuccess, showError, showInfo } = useNotification();
+
+  const { settings } = useSettings();
+  const { t } = useTranslation(settings.language);
 
   useEffect(() => {
     async function loadLectures() {
@@ -89,7 +94,7 @@ export function Library() {
     if (!selectedLectureId) return;
     setIsSummarizing(true);
     try {
-      const res = await apiClient.summarizeLecture(selectedLectureId);
+      const res = await apiClient.summarizeLecture(selectedLectureId, settings.summaryType, settings.language);
       if (res.success) {
         showSuccess("Summary Generated", "AI has summarized your lecture");
         const detailsRes = await apiClient.getLecture(selectedLectureId);
@@ -169,8 +174,8 @@ export function Library() {
       <div className="absolute top-0 right-1/4 w-96 h-96 bg-gray-100 blur-3xl rounded-full opacity-50 -z-10 pointer-events-none"></div>
       <div className="max-w-7xl mx-auto px-4 py-12 z-10">
         <div className="mb-12">
-          <h1 className="text-5xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tighter">Lecture Library</h1>
-          <p className="text-xl font-medium text-gray-500 dark:text-gray-400 tracking-tight">Browse and manage your recorded lectures</p>
+          <h1 className="text-5xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tighter">{t("Lecture Library")}</h1>
+          <p className="text-xl font-medium text-gray-500 dark:text-gray-400 tracking-tight">{t("Browse and manage your recorded lectures")}</p>
         </div>
 
         <div className="glass-card rounded-2xl p-4 mb-8">
@@ -178,7 +183,7 @@ export function Library() {
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search lectures..."
+              placeholder={t("Search lectures...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-gray-50/50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-gray-900 dark:text-white transition-all font-medium"
@@ -189,7 +194,7 @@ export function Library() {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="w-full md:w-1/3 glass-card rounded-3xl overflow-hidden flex flex-col h-[600px] md:h-[700px] premium-shadow">
             <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-              <h2 className="font-bold tracking-tight text-gray-900 dark:text-white text-lg">Files ({filtered.length})</h2>
+              <h2 className="font-bold tracking-tight text-gray-900 dark:text-white text-lg">{t("Files")} ({filtered.length})</h2>
             </div>
             <div className="overflow-y-auto flex-1 p-2 space-y-1">
               {loading ? (
@@ -236,8 +241,8 @@ export function Library() {
             {!selectedLectureId ? (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
                 <FileText className="w-16 h-16 mb-4 text-gray-200" />
-                <p className="text-lg font-medium text-gray-500">Select a file to preview</p>
-                <p className="text-sm text-gray-400">View transcripts, summaries, and details</p>
+                <p className="text-lg font-medium text-gray-500">{t("Select a file to preview")}</p>
+                <p className="text-sm text-gray-400">{t("View transcripts, summaries, and details")}</p>
               </div>
             ) : loadingDetails ? (
               <div className="flex-1 flex flex-col items-center justify-center">

@@ -112,12 +112,17 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
+from app.api import analytics, chat, documents, lectures, reports, summarization, translate
+
+...
+
 app.include_router(lectures.router)
 app.include_router(chat.router)
 app.include_router(analytics.router)
 app.include_router(reports.router)
 app.include_router(summarization.router)
 app.include_router(documents.router)
+app.include_router(translate.router)
 
 
 # ---------------------------------------------------------------------------

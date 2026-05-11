@@ -110,22 +110,22 @@ export class ApiClient {
     });
   }
 
-  transcribeLecture(lectureId: string, model: string = 'balanced') {
-    return apiFetch(`/api/lectures/${lectureId}/transcribe?model=${model}`, { method: 'POST' });
+  transcribeLecture(lectureId: string, model: string = 'balanced', language: string = 'english') {
+    return apiFetch(`/api/lectures/${lectureId}/transcribe?model=${model}&language=${encodeURIComponent(language)}`, { method: 'POST' });
   }
 
-  summarizeLecture(lectureId: string, summaryType = 'executive') {
+  summarizeLecture(lectureId: string, summaryType = 'executive', language: string = 'english') {
     return apiFetch(
-      `/api/lectures/${lectureId}/summarize?summary_type=${summaryType}`,
+      `/api/lectures/${lectureId}/summarize?summary_type=${summaryType}&language=${encodeURIComponent(language)}`,
       { method: 'POST' }
     );
   }
 
-  sendChatMessage(lectureId: string, message: string) {
+  sendChatMessage(lectureId: string, message: string, language: string = 'english') {
     return apiFetch(`/api/lectures/${lectureId}/chat/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, language }),
     });
   }
 
@@ -139,11 +139,22 @@ export class ApiClient {
     });
   }
 
-  generateReport(lectureId: string, reportType: string) {
+  generateReport(lectureId: string, reportType: string, language: string = 'english') {
     return apiFetch('/api/reports/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lecture_id: lectureId, report_type: reportType }),
+      body: JSON.stringify({ lecture_id: lectureId, report_type: reportType, language }),
+    });
+  }
+
+  translateTexts(texts: string[], targetLanguage: string) {
+    if (targetLanguage === 'english' || texts.length === 0) {
+      return Promise.resolve(texts.reduce((acc, t) => ({ ...acc, [t]: t }), {}));
+    }
+    return apiFetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts, target_language: targetLanguage }),
     });
   }
 

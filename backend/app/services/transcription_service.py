@@ -19,11 +19,21 @@ class TranscriptionService:
         self.use_groq = bool(GROQ_API_KEY) and not force_local
 
     def transcribe(self, audio_file_path: str, language: str = "en") -> dict:
-        if self.use_groq:
-            return self._transcribe_groq(audio_file_path)
-        return self._transcribe_local(audio_file_path, language)
+        # map long language names to iso codes if needed
+        lang_map = {
+            "english": "en",
+            "spanish": "es",
+            "french": "fr",
+            "german": "de",
+            "swahili": "sw",
+        }
+        iso_lang = lang_map.get(language.lower(), language.lower()[:2] if len(language) > 2 else language)
 
-    def _transcribe_groq(self, audio_file_path: str) -> dict:
+        if self.use_groq:
+            return self._transcribe_groq(audio_file_path, iso_lang)
+        return self._transcribe_local(audio_file_path, iso_lang)
+
+    def _transcribe_groq(self, audio_file_path: str, language: str = "en") -> dict:
         try:
             from groq import Groq
             client = Groq(api_key=GROQ_API_KEY)
@@ -32,17 +42,18 @@ class TranscriptionService:
                     file=(os.path.basename(audio_file_path), f),
                     model="whisper-large-v3-turbo",
                     response_format="verbose_json",
+                    language=language,
                 )
             return {
                 "success": True,
                 "text": result.text,
                 "duration": getattr(result, "duration", 0),
-                "language": getattr(result, "language", "en"),
+                "language": getattr(result, "language", language),
             }
         except Exception as e:
             logger.error("Groq transcription failed, falling back to local: %s", e)
             # Auto-fallback to local on Groq failure (rate limit, size limit, etc.)
-            return self._transcribe_local(audio_file_path)
+            return self._transcribe_local(audio_file_path, language)
 
     def _transcribe_local(self, audio_file_path: str, language: str = "en") -> dict:
         try:

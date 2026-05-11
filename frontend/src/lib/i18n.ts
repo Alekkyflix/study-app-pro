@@ -276,14 +276,62 @@ export const translations = {
   }
 };
 
-export type LanguageCode = keyof typeof translations;
+export type LanguageCode = keyof typeof translations | string;
 export type TranslationKey = keyof typeof translations.english;
 
-export const useTranslation = (lang: string) => {
-  const language = (lang as LanguageCode) || 'english';
+import { useState } from 'react';
+import { apiClient } from '../services/api';
+
+const globalDynamicCache: Record<string, Record<string, string>> = JSON.parse(localStorage.getItem('studypro_dynamic_translations') || '{}');
+const pendingTranslations = new Set<string>();
+let translationTimeout: any = null;
+
+const flushQueue = (lang: string, onUpdate: () => void) => {
+  if (pendingTranslations.size === 0) return;
+  const texts = Array.from(pendingTranslations);
+  pendingTranslations.clear();
   
-  const t = (key: TranslationKey): string => {
-    return translations[language]?.[key] || translations['english'][key] || key;
+  apiClient.translateTexts(texts, lang).then(res => {
+    if (!globalDynamicCache[lang]) globalDynamicCache[lang] = {};
+    for (const [key, val] of Object.entries(res)) {
+      globalDynamicCache[lang][key] = val as string;
+    }
+    localStorage.setItem('studypro_dynamic_translations', JSON.stringify(globalDynamicCache));
+    onUpdate();
+  }).catch(e => console.error("Dynamic translation failed", e));
+};
+
+export const useTranslation = (lang: string) => {
+  const language = lang || 'english';
+  const [, setTick] = useState(0);
+  
+  const t = (keyOrText: string): string => {
+    let englishText = keyOrText;
+
+    // Check if it's a known static key
+    if (translations.english[keyOrText as TranslationKey]) {
+      if (language === 'english') return translations.english[keyOrText as TranslationKey];
+      const staticDict = translations[language as keyof typeof translations];
+      if (staticDict && (staticDict as any)[keyOrText]) return (staticDict as any)[keyOrText];
+      
+      englishText = translations.english[keyOrText as TranslationKey];
+    }
+    
+    if (language === 'english') return englishText;
+    
+    if (globalDynamicCache[language]?.[englishText]) {
+      return globalDynamicCache[language][englishText];
+    }
+    
+    if (!pendingTranslations.has(englishText)) {
+      pendingTranslations.add(englishText);
+      if (translationTimeout) clearTimeout(translationTimeout);
+      translationTimeout = setTimeout(() => {
+        flushQueue(language, () => setTick(n => n + 1));
+      }, 500);
+    }
+    
+    return englishText;
   };
   
   return { t };
